@@ -33,7 +33,8 @@ export default function Auth() {
       <div className="card" style={{ padding: 40, width: '100%', maxWidth: 400, textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20, color: 'var(--accent)' }}>
           <Wallet size={40} />
-          <h1 style={{ fontSize: '1.8rem', margin: 0 }}>BudgetFlow</h1>
+          <h1 style={{ fontSize: '1.8rem', margin: 0 }}>OmegaBudget</h1>
+          <h3 style={{ fontSize: '1rem', margin: 0 }}>The last budget your family will ever need</h3>
         </div>
         
         <p style={{ marginBottom: 30, color: 'var(--text-dim)' }}>
