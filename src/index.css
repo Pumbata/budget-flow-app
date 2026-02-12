@@ -1,0 +1,2046 @@
+/* --- THEME DEFINITIONS --- */
+
+/* 1. Default (Light Mode) - Clean White/Blue */
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #0f172a;
+  --text-dim: #64748b;
+  --border: #e2e8f0;
+  --accent: #3b82f6; /* Bright Blue */
+  --green: #22c55e;
+  --red: #ef4444;
+}
+
+/* 2. Dark Mode - Slate/Blue */
+[data-theme='dark'] {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #f8fafc;
+  --text-dim: #94a3b8;
+  --border: #334155;
+  --accent: #60a5fa; /* Soft Blue */
+  --green: #4ade80;
+  --red: #f87171;
+}
+
+/* 3. Taupe Mode - Warm/Mauve */
+[data-theme='taupe'] {
+  --bg: #e6e2dd;       /* Warm light grey-beige */
+  --card: #f2f0ed;     /* Slightly lighter for cards */
+  --text: #4a403a;     /* Deep Coffee Brown */
+  --text-dim: #8c8279; /* Muted warm grey */
+  --border: #d4cdc5;   /* Distinct border */
+  --accent: #9f8ea1;   /* Muted Mauve/Purple */
+  --green: #7d9c7e;    /* Sage Green */
+  --red: #c97c7c;      /* Muted Terracotta */
+}
+
+/* --- THEME PREVIEW BUTTONS --- */
+.theme-btn-group {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.theme-btn {
+  flex: 1;
+  padding: 15px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+/* Visual styles for the buttons themselves to match their themes */
+.theme-btn.light {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+.theme-btn.dark {
+  background: #1e293b;
+  color: #f8fafc;
+  border-color: #334155;
+}
+.theme-btn.taupe {
+  background: #e6e2dd;
+  color: #4a403a;
+  border-color: #d4cdc5;
+}
+
+/* Active State Ring */
+.theme-btn.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.3s, color 0.3s; /* Smooth transition */
+}
+
+.app-container { display: flex; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar {
+  width: 240px;
+  background: var(--sidebar);
+  padding: 24px;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+  transition: background-color 0.3s;
+}
+.logo { 
+  display: flex; align-items: center; gap: 12px; 
+  font-size: 1.2rem; font-weight: 700; color: var(--accent); margin-bottom: 40px; 
+}
+.nav-item {
+  background: none; border: none; color: var(--text-dim);
+  padding: 12px; text-align: left; cursor: pointer; border-radius: 8px; font-weight: 500;
+  display: flex; align-items: center; gap: 10px; font-size: 0.95rem;
+}
+.nav-item:hover { background: rgba(125,125,125,0.1); color: var(--text); }
+.nav-item.active { background: var(--accent); color: white; }
+
+/* MAIN CONTENT */
+.main-content { flex: 1; padding: 32px; overflow-y: auto; }
+
+.page-header { 
+  display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; 
+}
+h1 { margin: 0; font-size: 2rem; }
+.subtitle { color: var(--text-dim); margin-top: 5px; }
+
+/* SUMMARY CARD */
+.summary-card {
+  background: var(--card);
+  padding: 15px 25px;
+  border-radius: 12px;
+  text-align: right;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+.summary-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.summary-amount { font-size: 1.8rem; font-weight: 800; }
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+
+/* CONTROLS */
+.controls-bar { margin-bottom: 20px; display: flex; justify-content: flex-end; }
+.balance-btn {
+  background: var(--accent); color: white; border: none; padding: 10px 20px; 
+  border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; gap: 8px; align-items: center;
+}
+.balance-btn:hover { opacity: 0.9; }
+
+/* BALANCER BOARD */
+.board { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media(max-width: 900px) { .board { grid-template-columns: 1fr; } }
+
+.pay-column {
+  background: var(--sidebar);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+}
+
+.col-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.col-header h2 { margin: 0; font-size: 1.2rem; }
+
+.income-input-group { display: flex; align-items: center; gap: 10px; }
+.income-input-group input {
+  width: 90px; background: var(--bg); border: 1px solid var(--border); color: var(--green); 
+  padding: 8px; border-radius: 6px; text-align: right; font-size: 1.1rem; font-weight: bold;
+}
+
+/* SCOREBOARD */
+.scoreboard {
+  background: var(--bg);
+  padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; border: 2px solid transparent;
+}
+.scoreboard.success { border-color: var(--green); color: var(--green); }
+.scoreboard.danger { border-color: var(--red); color: var(--red); }
+.scoreboard .amount { font-size: 1.4rem; font-weight: 700; }
+
+/* DRAGGABLE LIST */
+.bill-list-area {
+  background: var(--bg); border-radius: 12px; padding: 12px; min-height: 400px;
+}
+.bill-list-area.dragging-over { background: var(--card); box-shadow: inset 0 0 0 2px var(--accent); }
+
+.draggable-bill {
+  background: var(--card); color: var(--text); padding: 12px; margin-bottom: 10px;
+  border-radius: 8px; display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05); user-select: none; border: 1px solid var(--border);
+}
+.draggable-bill:hover { transform: translateY(-2px); border-color: var(--accent); }
+.bill-content { flex: 1; }
+.bill-name { font-weight: 600; }
+.bill-sub { font-size: 0.8rem; color: var(--text-dim); }
+.bill-amt { font-weight: 600; }
+
+/* FORMS (Recurring Bills) */
+.form-card { background: var(--card); padding: 24px; border-radius: 16px; max-width: 600px; margin-bottom: 30px; border: 1px solid var(--border); }
+.add-bill-form { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
+.form-row { display: flex; gap: 16px; }
+.input-field {
+  padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); flex: 1;
+}
+.form-actions { display: flex; gap: 10px; }
+.btn-primary { 
+  background: var(--accent); color: white; padding: 12px 24px; border: none; border-radius: 8px; 
+  cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; 
+}
+.btn-cancel { background: transparent; color: var(--text-dim); border: none; cursor: pointer; }
+
+/* BILL GRID (Manager View) */
+.bill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+.bill-card-item {
+  background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.bill-actions { display: flex; gap: 8px; }
+.bill-actions button { background: none; border: none; color: var(--text-dim); cursor: pointer; }
+.bill-actions button.del:hover { color: var(--red); }
+
+/* NEW OWNER & SWIMLANE STYLES */
+.split-summary-card {
+  background: var(--card); border: 1px solid var(--border); padding: 15px 25px; border-radius: 12px;
+  min-width: 250px;
+}
+.split-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.split-row.highlight { margin-bottom: 0; margin-top: 8px; }
+.split-divider { height: 1px; background: var(--border); width: 100%; }
+.text-accent { color: var(--accent); font-weight: 800; font-size: 1.2rem; }
+.label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-dim); }
+
+.income-bar {
+  background: var(--sidebar); padding: 15px; border-radius: 12px; margin-bottom: 30px;
+  display: flex; gap: 30px; justify-content: center; border: 1px solid var(--border);
+}
+
+.balance-section { margin-bottom: 30px; }
+.balance-section h3 { margin-bottom: 10px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+
+.balance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+.mini-column {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px;
+  min-height: 100px; transition: background 0.2s;
+}
+.mini-column.drag-active { background: var(--sidebar); border-color: var(--accent); }
+
+.mini-header {
+  display: flex; justify-content: space-between; padding: 0 5px 10px 5px;
+  font-size: 0.85rem; color: var(--text-dim); font-weight: 600; border-bottom: 1px solid var(--border); margin-bottom: 10px;
+}
+.mini-total { color: var(--text); }
+
+.mini-bill {
+  padding: 8px 12px; font-size: 0.9rem; margin-bottom: 8px;
+}
+
+.owner-toggle-row { display: flex; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+.owner-btn {
+  flex: 1; min-width: 80px; background: var(--bg); border: 1px solid var(--border); color: var(--text-dim);
+  padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.85rem;
+}
+.owner-btn:hover { background: var(--card); }
+.owner-btn.selected {
+  background: var(--accent); color: white; border-color: var(--accent);
+}
+.bill-owner-tag { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
+
+/* THEME CARDS */
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; }
+.theme-card {
+  border: 1px solid var(--border); border-radius: 12px; padding: 15px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  transition: transform 0.2s;
+}
+.theme-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+.theme-preview { width: 100%; height: 60px; border-radius: 8px; display: flex; overflow: hidden; }
+.theme-preview .c1 { flex: 1; }
+.theme-preview .c2 { flex: 2; }
+
+/* OWNER LIST */
+.owner-list { display: flex; flex-direction: column; gap: 10px; }
+.owner-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+}
+
+/* INCOME GRID (Top of Dashboard) */
+.income-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.person-income-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+.person-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.free-cash-badge {
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 800;
+}
+.free-cash-badge.pos { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+.free-cash-badge.neg { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+.income-inputs {
+  display: flex;
+  gap: 12px;
+}
+
+.inp-group {
+  flex: 1;
+}
+
+.inp-group label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.inp-group input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  box-sizing: border-box; /* Fix width issues */
+}
+
+.inp-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Mini Free Cash Indicator */
+.mini-free {
+  font-size: 0.75rem;
+  margin-top: 6px;
+  font-weight: 700;
+  text-align: right;
+}
+.mini-free.pos { color: var(--green); }
+.mini-free.neg { color: var(--red); }
+
+
+/* SECTION HEADER ROW */
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin-bottom: 15px;
+}
+
+.section-header-row h3 {
+  margin: 0;
+  border-bottom: none !important; /* Override inline styles from previous steps */
+  padding-bottom: 0 !important;
+}
+
+.section-balance-btn {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.section-balance-btn:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* Stats Stack under Income Input */
+.stats-stack {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.mini-due {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+/* Ensure Free Cash stays bold */
+.mini-free {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+
+/* --- RECURRING BILLS: VERTICAL LIST --- */
+.bill-vertical-list {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.owner-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.owner-group-title {
+  margin: 0 0 12px 0;
+  font-size: 1.1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.owner-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bill-list-item {
+  background: var(--card);
+  padding: 15px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.2s;
+}
+
+.bill-list-item:hover {
+  transform: translateX(4px);
+  border-color: var(--accent);
+}
+
+.bill-list-item .bill-info {
+  flex: 1;
+}
+
+.bill-list-item .bill-amt {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-right: 20px;
+}
+
+/* BIG RED AUTO-BALANCE ALL BUTTON */
+.btn-balance-all {
+  background: var(--red);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s, opacity 0.2s;
+  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+}
+
+.btn-balance-all:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-balance-all:active {
+  transform: translateY(0);
+}
+
+
+/* --- PAGINATION & NEW DASHBOARD FEATURES --- */
+
+/* Month Selector */
+.month-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  background: var(--card);
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.month-selector h2 { margin: 0; font-size: 1.5rem; width: 200px; text-align: center; }
+.month-selector button {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.month-selector button:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* Paid State Styles */
+.draggable-bill {
+  position: relative; /* needed for the layout */
+}
+.draggable-bill.is-paid {
+  opacity: 0.5;
+  background: var(--bg);
+}
+.draggable-bill.is-paid .bill-name {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+.draggable-bill.is-paid .bill-amt {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+/* Bill Card Buttons */
+.btn-toggle-paid {
+  background: none; border: none; cursor: pointer; padding: 0 5px 0 0; display: flex; align-items: center;
+}
+.btn-del-month {
+  background: none; border: none; cursor: pointer; color: var(--text-dim); margin-left: 8px;
+  opacity: 0; transition: opacity 0.2s;
+}
+.draggable-bill:hover .btn-del-month { opacity: 1; }
+.btn-del-month:hover { color: var(--red); }
+
+/* Quick Add Button */
+.mini-header > div {
+  display: flex; align-items: center; gap: 8px;
+}
+.btn-add-quick {
+  background: transparent; border: 1px dashed var(--text-dim); color: var(--text-dim);
+  border-radius: 4px; padding: 2px 4px; cursor: pointer; display: flex; align-items: center;
+}
+.btn-add-quick:hover { background: var(--card); color: var(--text); border-color: var(--text); }
+
+
+/* --- MODAL STYLES --- */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 15px;
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+}
+.btn-close:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* --- SAVINGS & REPAYMENTS STYLES --- */
+
+/* Dashboard Widget */
+.savings-widget {
+  background: var(--sidebar);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+.savings-widget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+.savings-mini-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 8px;
+}
+.goal-progress-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+.goal-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s ease-out;
+}
+
+/* Master Goals Page */
+.goals-master-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+.goal-master-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.goal-master-card.complete {
+  border-color: var(--green);
+  background: rgba(34, 197, 94, 0.05);
+}
+.goal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+.goal-header h4 { margin: 5px 0 0 0; font-size: 1.1rem; }
+.goal-owner-badge {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--accent);
+}
+.goal-actions { display: flex; gap: 8px; }
+.goal-actions button { background: none; border: none; color: var(--text-dim); cursor: pointer; }
+.goal-actions button.del:hover { color: var(--red); }
+
+.goal-stats {
+  display: flex; justify-content: space-between; font-weight: 600; font-size: 0.9rem; margin-bottom: 5px;
+}
+.goal-footer {
+  display: flex; justify-content: space-between; margin-top: 15px; font-size: 0.85rem; color: var(--text-dim);
+}
+.complete-badge { color: var(--green); font-weight: 700; }
+
+/* Dashboard Bill Overrides */
+.is-savings-bill {
+  background: rgba(59, 130, 246, 0.05); /* Slight blue tint */
+}
+
+/* NEW SYNC BUTTON */
+.btn-sync {
+  background: var(--sidebar);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-sync:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* --- VIEW TOGGLE --- */
+.view-toggle {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.view-toggle button {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.view-toggle button:hover {
+  color: var(--text);
+}
+
+.view-toggle button.active {
+  background: var(--card);
+  color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/* --- CHARTS --- */
+.chart-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 30px;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chart-container h3 {
+  margin-top: 0;
+  color: var(--text);
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+.chart-tooltip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.chart-tooltip .label {
+  margin: 0 0 5px 0;
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.chart-tooltip .value {
+  margin: 0;
+  color: var(--text);
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+
+/* Ensure Recharts text looks good in dark mode */
+.recharts-legend-item-text {
+  color: var(--text) !important;
+}
+
+
+/* --- CHART GRID LAYOUT --- */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chart-card h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.chart-card.full-width {
+  grid-column: 1 / -1;
+}
+
+/* --- CHART HEADER WITH DROPDOWN --- */
+.chart-header-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.chart-header-row h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.select-wrapper-small {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.select-wrapper-small .icon {
+  position: absolute;
+  left: 8px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.select-wrapper-small select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px 4px 26px; /* Space for icon */
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  appearance: none; /* Removes default arrow in some browsers */
+}
+
+.select-wrapper-small select:hover {
+  border-color: var(--accent);
+}
+
+
+/* --- EXPAND BUTTON --- */
+.btn-icon-only {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-only:hover {
+  background: var(--bg);
+  color: var(--accent);
+}
+
+/* --- CHART MODAL (POP-OUT) --- */
+.chart-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.85); /* Darker backdrop for focus */
+  backdrop-filter: blur(5px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.chart-modal-content {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 90vw;
+  height: 85vh;
+  padding: 30px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.btn-close-chart {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.btn-close-chart:hover {
+  background: var(--red);
+  color: white;
+  border-color: var(--red);
+}
+
+
+/* --- TO-DO WIDGET --- */
+.todo-widget {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.todo-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  transition: all 0.2s;
+}
+
+.todo-item:last-child {
+  border-bottom: none;
+}
+
+.todo-input-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+/* --- UNIVERSAL CHECKLIST WIDGET --- */
+.checklist-widget {
+  background: var(--bg);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Global Variant */
+.checklist-widget.global {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 20px;
+  margin-bottom: 30px;
+}
+.checklist-widget.global .checklist-title {
+  margin-top: 0;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Mini Variant */
+.checklist-widget.mini {
+  background: rgba(0,0,0,0.05); /* Slight darken for contrast */
+  border: 1px dashed var(--border);
+  padding: 10px;
+}
+[data-theme='dark'] .checklist-widget.mini {
+  background: rgba(255,255,255,0.03);
+}
+
+.checklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.checklist-item:last-child {
+  border-bottom: none;
+}
+
+.checklist-item .completed {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+.checklist-widget.mini .checklist-item {
+  font-size: 0.8rem;
+  padding: 4px 0;
+}
+
+.checklist-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.checklist-form input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px;
+  font-size: 0.9rem;
+  color: var(--text);
+  outline: none;
+}
+.checklist-form input:focus {
+  border-color: var(--accent);
+}
+
+.checklist-form button {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.checklist-form button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Icons */
+.btn-check {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+.btn-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  opacity: 0.5;
+  padding: 0 0 0 8px;
+}
+.btn-del:hover {
+  color: var(--red);
+  opacity: 1;
+}
+
+
+
+/* --- CALENDAR HEATMAP WIDGET --- */
+.calendar-widget {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.calendar-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px; /* Space for scrollbar */
+}
+
+/* Custom Scrollbar for the strip */
+.calendar-strip::-webkit-scrollbar {
+  height: 6px;
+}
+.calendar-strip::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.day-card {
+  flex: 0 0 46px;
+  height: 60px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.day-card.is-today {
+  border: 2px solid var(--accent);
+}
+
+.day-name {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.day-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* HEAT INTENSITIES */
+.day-card.intensity-low {
+  background: rgba(34, 197, 94, 0.15); /* Greenish tint */
+  border-color: rgba(34, 197, 94, 0.3);
+}
+.day-card.intensity-med {
+  background: rgba(245, 158, 11, 0.2); /* Orange tint */
+  border-color: rgba(245, 158, 11, 0.4);
+}
+.day-card.intensity-high {
+  background: rgba(239, 68, 68, 0.2); /* Red tint */
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* TOOLTIP ON HOVER */
+.day-tooltip {
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  width: 200px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s;
+  pointer-events: none;
+}
+
+.day-card:hover .day-tooltip {
+  opacity: 1;
+  visibility: visible;
+  bottom: 120%; /* Slight pop up */
+}
+
+.tooltip-header {
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+
+/* --- BIG CALENDAR GRID --- */
+.big-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.cal-header {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  padding-bottom: 8px;
+}
+
+.cal-cell {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 80px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cal-cell.empty {
+  background: transparent;
+  border: none;
+}
+
+.cal-date {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.cal-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cal-pill {
+  font-size: 0.7rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.cal-pill.paid {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.cal-pill.shared {
+  border-left: 3px solid var(--accent);
+}
+
+/* --- UPCOMING LIST --- */
+.upcoming-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upcoming-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.upcoming-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  border-radius: 6px;
+  min-width: 40px;
+}
+
+.upcoming-date .day {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.upcoming-date .ordinal {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.upcoming-details {
+  flex: 1;
+}
+
+.upcoming-details .name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.upcoming-details .meta {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.upcoming-amount {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+/* --- FORECAST GRID LAYOUT --- */
+@media (max-width: 1000px) {
+  .forecast-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* --- FORECAST PAGE LAYOUT --- */
+.forecast-section {
+  margin-bottom: 30px;
+}
+
+/* --- UPCOMING BILLS GRID --- */
+.upcoming-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.upcoming-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.upcoming-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-color: var(--accent);
+}
+
+.upcoming-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  min-width: 50px;
+}
+
+.upcoming-day {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+
+.upcoming-ordinal {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.upcoming-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.upcoming-right .bill-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.upcoming-right .bill-sub {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.upcoming-right .bill-amount {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+
+/* --- MINI DATE INPUT --- */
+.mini-date-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border);
+  color: var(--text-dim);
+  width: 24px;
+  text-align: center;
+  font-size: 0.75rem;
+  padding: 0;
+  outline: none;
+}
+
+.mini-date-input:focus {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Remove arrows from number input */
+.mini-date-input::-webkit-outer-spin-button,
+.mini-date-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+
+/* --- DAY PICKER POPOVER --- */
+.day-picker-container {
+  position: relative;
+  display: inline-block;
+}
+
+.day-picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+}
+
+.day-picker-trigger:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.day-picker-trigger .icon {
+  color: var(--text-dim);
+}
+
+.day-picker-popover {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  z-index: 500;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  width: 220px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.day-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: none;
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.day-btn:hover {
+  background: var(--border);
+}
+
+.day-btn.active {
+  background: var(--accent);
+  color: white;
+  font-weight: 700;
+}
+
+.btn-clear-date {
+  width: 100%;
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-clear-date:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+
+/* --- BILL CARD OWNER LABEL --- */
+.bill-owner-label {
+  font-size: 0.65rem;
+  color: var(--accent); /* Uses your accent color to stand out slightly */
+  margin-top: 2px;
+  font-weight: 600;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+
+/* --- RECURRING BILLS LIST STYLING --- */
+.bills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bill-row-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.bill-row-card:hover {
+  border-color: var(--accent);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.bill-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: 1;
+}
+
+.bill-date {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-dim);
+  width: 40px;
+  text-align: center;
+  line-height: 1;
+}
+
+/* Add "st/nd/th" suffix logic via CSS is tricky, usually handled in JS, 
+   but we can make the number look cool regardless */
+
+.bill-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.bill-details .name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.bill-details .owner-badge {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+
+.bill-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.bill-actions .amount {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+/* Edit Form inside the card */
+.edit-form-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.edit-form-grid input,
+.edit-form-grid select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  padding-left: 8px;
+  overflow: hidden;
+}
+
+.input-group .prefix {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.input-group input {
+  border: none;
+  background: transparent;
+  padding: 8px 4px;
+}
+
+/* Responsive fix for the edit form on smaller screens */
+@media (max-width: 900px) {
+  .edit-form-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+  }
+  .edit-form-grid button {
+    width: 100%;
+  }
+}
+
+
+/* --- GROUPED BILLS LAYOUT --- */
+.owner-group-section {
+  margin-bottom: 30px;
+}
+
+.group-header {
+  font-size: 1.1rem;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* --- LABELED FORM GRID (Robust Layout) --- */
+.labeled-form-grid {
+  display: grid;
+  /* Smart Grid: Columns must be at least 110px wide, otherwise they wrap */
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 15px; 
+  align-items: end;
+  width: 100%;
+}
+
+/* Specific overrides for the "Add Bill" card to look nicer */
+.card .labeled-form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  row-gap: 20px; /* More breathing room between rows when wrapping */
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0; /* Prevents flex items from overflowing */
+}
+
+.form-field label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 2px;
+  white-space: nowrap; /* Keep label on one line */
+}
+
+.form-field input,
+.form-field select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0 12px; /* Horizontal padding */
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.9rem;
+  width: 100%;
+  height: 42px; /* Taller, comfortable touch targets */
+  box-sizing: border-box; /* Ensure padding doesn't affect width */
+  transition: border-color 0.2s;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Action Buttons Cell */
+.form-actions-cell {
+  display: flex;
+  align-items: center;
+  height: 42px; /* Matches input height */
+  gap: 8px;
+  min-width: 80px;
+}
+
+/* --- RESPONSIVE TWEAKS --- */
+@media (max-width: 1200px) {
+  /* On medium screens, the inline edit row might need to wrap */
+  .bill-row-card .labeled-form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  /* On mobile, stack everything */
+  .labeled-form-grid, 
+  .card .labeled-form-grid,
+  .bill-row-card .labeled-form-grid {
+    grid-template-columns: 1fr 1fr; /* 2 columns on mobile */
+  }
+  
+  /* Make name field span full width on mobile */
+  .form-field:first-child {
+    grid-column: 1 / -1;
+  }
+  
+  .form-actions-cell {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+}
+
+
+/* --- SETTINGS: CATEGORY MANAGER --- */
+.categories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 15px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.category-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.add-category-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.color-picker-input {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* --- SETTINGS PAGE STYLES --- */
+
+/* Linear Layout (Single Column, Centered) */
+.settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 600px; /* Keeps input fields a readable length */
+  margin: 0 auto;   /* Centers the column on the page */
+  width: 100%;
+}
+
+.settings-card {
+  padding: 25px; /* Slightly more padding for the document feel */
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 12px;
+}
+
+.settings-card h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+  color: var(--text);
+}
+
+/* List Items (Categories & Owners) */
+.categories-list,
+.owners-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  max-height: 300px;
+  overflow-y: auto; /* Scroll if list gets too long */
+  padding-right: 5px; /* Space for scrollbar */
+}
+
+.category-item,
+.owner-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+
+.category-item:hover,
+.owner-item:hover {
+  border-color: var(--accent);
+}
+
+/* ADD ROW FIXES (The Critical Part) */
+.add-category-form,
+.add-owner-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Force text inputs to fill available space */
+.add-category-form input[type="text"],
+.add-owner-form input.input-field {
+  flex: 1;
+  min-width: 0; /* Prevents flexbox overflow issues */
+  height: 42px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.add-category-form input:focus,
+.add-owner-form input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* Color Picker Styling */
+.color-picker-input {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0; /* Don't let it squash */
+}
+
+/* Remove default browser styles for color input */
+.color-picker-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+.color-picker-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+/* Buttons in Settings */
+.add-category-form button,
+.add-owner-form button {
+  height: 42px;
+  width: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* Balance Rows in Data Management */
+.balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.balance-row input {
+  width: 120px;
+  text-align: right;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: var(--text);
+}
+
+/* Custom Scrollbar for the lists */
+.categories-list::-webkit-scrollbar,
+.owners-list::-webkit-scrollbar {
+  width: 6px;
+}
+.categories-list::-webkit-scrollbar-thumb,
+.owners-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+
+/* --- CLOSING RITUAL STYLES --- */
+
+/* The Button */
+.btn-close-books {
+  background: var(--bg);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 0 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  height: 36px;
+}
+
+.btn-close-books:hover {
+  background: var(--accent);
+  color: white;
+}
+
+/* The "Closed" Badge next to the title */
+.closed-badge {
+  font-size: 0.7rem;
+  background: var(--bg);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* --- REOPEN BOOKS BUTTON --- */
+.btn-reopen-books {
+  background: var(--bg);
+  color: var(--text-dim);
+  border: 1px solid var(--text-dim);
+  padding: 0 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  height: 36px;
+}
+
+.btn-reopen-books:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
