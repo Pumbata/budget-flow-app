@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { LayoutDashboard, Receipt, Wallet, RefreshCw, RefreshCcw, Users, User, Settings as SettingsIcon, ChevronLeft, ChevronRight, CheckCircle2, Circle, Trash2, Plus, X, Target, PieChart as PieChartIcon, Kanban, Filter, Maximize2, CheckSquare, CalendarClock, Calendar as CalendarIcon, ChevronDown, Layers, Tag, Home, Car, Zap, CreditCard, Smile, ShoppingBag, Activity, HelpCircle, Landmark, Lock, Unlock, LogOut, Loader2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ComposedChart, Area, Line } from 'recharts';
-import { supabase } from './supabaseClient'; // IMPORT SUPABASE
-import Auth from './Auth'; // IMPORT AUTH
+import { supabase } from './supabaseClient';
+import Auth from './Auth';
 import RecurringBills from './RecurringBills';
 import SavingsManager from './SavingsManager';
 import Settings from './Settings';
@@ -11,16 +11,17 @@ import Forecast from './Forecast';
 import { autoBalanceBudget } from './balanceEngine';
 import './index.css';
 
-// ... (Constants & Helpers) ...
+// --- Constants & Helpers ---
 export const DEFAULT_CATEGORIES = { housing: { label: 'Housing', color: '#ef4444' }, transport: { label: 'Transport', color: '#f97316' }, utilities: { label: 'Utilities', color: '#eab308' }, debt: { label: 'Debt', color: '#8b5cf6' }, lifestyle: { label: 'Lifestyle', color: '#ec4899' }, shopping: { label: 'Shopping', color: '#06b6d4' }, health: { label: 'Health', color: '#10b981' }, savings: { label: 'Savings', color: '#22c55e' }, other: { label: 'Other', color: '#64748b' } };
 export function getCategoryIcon(catId) { const size = 14; switch(catId) { case 'housing': return <Home size={size}/>; case 'transport': return <Car size={size}/>; case 'utilities': return <Zap size={size}/>; case 'debt': return <CreditCard size={size}/>; case 'lifestyle': return <Smile size={size}/>; case 'shopping': return <ShoppingBag size={size}/>; case 'health': return <Activity size={size}/>; case 'savings': return <Landmark size={size}/>; case 'other': return <HelpCircle size={size}/>; default: return <Tag size={size}/>; } }
 export function getOrdinal(n) { const j = n % 10, k = n % 100; if (j == 1 && k != 11) return n + "st"; if (j == 2 && k != 12) return n + "nd"; if (j == 3 && k != 13) return n + "rd"; return n + "th"; }
 
 export default function App() {
+  // 1. Session State
   const [session, setSession] = useState(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-  // --- APP STATE (Initialized Empty) ---
+  // 2. View State
   const [view, setView] = useState('dashboard');
   const [dashboardMode, setDashboardMode] = useState('board');
   const [expandedChart, setExpandedChart] = useState(null); 
@@ -28,6 +29,7 @@ export default function App() {
   const [chartGroupBy, setChartGroupBy] = useState('owner'); 
   const [cashFlowFilter, setCashFlowFilter] = useState('All');
   
+  // 3. Data State
   const [theme, setTheme] = useState('dark');
   const [owners, setOwners] = useState(['Shared', 'Randy', 'Sam']);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -38,19 +40,25 @@ export default function App() {
   const [savingsGoals, setSavingsGoals] = useState([]);
   const [monthlyData, setMonthlyData] = useState({});
 
+  // 4. Modal/Form State (MOVED UP to fix Error #310)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState('onetime'); 
+  const [modalData, setModalData] = useState({ owner: '', columnId: '', name: '', amount: '', goalId: null, category: 'other' });
+  const [isClosingOpen, setIsClosingOpen] = useState(false);
+  const [closingBalances, setClosingBalances] = useState({});
+  const [newTodoText, setNewTodoText] = useState('');
+
   const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
   const monthLabel = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-  // --- AUTH & DATA LOADING ---
+  // --- Effects ---
   useEffect(() => {
-    // 1. Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) loadUserData(session.user.id);
       else setIsLoadingData(false);
     });
 
-    // 2. Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) loadUserData(session.user.id);
@@ -60,18 +68,16 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // LOAD from Supabase
   const loadUserData = async (userId) => {
     setIsLoadingData(true);
     try {
       const { data, error } = await supabase.from('user_state').select('*').eq('id', userId).single();
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "Row not found" (New user)
+      if (error && error.code !== 'PGRST116') { // PGRST116 = Row not found (New user), which is fine
         console.error('Error loading data:', error);
       }
 
       if (data) {
-        // Load data into state
         if (data.owners) setOwners(data.owners);
         if (data.categories) setCategories(data.categories);
         if (data.recurring_bills) setRecurringBills(data.recurring_bills);
@@ -81,7 +87,7 @@ export default function App() {
         if (data.app_start_date) setAppStartDate(data.app_start_date);
         if (data.theme) setTheme(data.theme);
       } else {
-        // Initialize new user
+        // Initialize new user defaults
         setAppStartDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`);
       }
     } catch (err) {
@@ -91,12 +97,8 @@ export default function App() {
     }
   };
 
-  // SAVE to Supabase (Debounced logic effectively handled by effect dependencies, but explicit save is safer)
-  // We'll use a `useEffect` that triggers when key data changes to save to cloud.
-  // Note: In a real prod app, we'd debounce this. For now, we save on every change.
   useEffect(() => {
     if (!session || isLoadingData) return;
-
     const saveData = async () => {
       const updates = {
         id: session.user.id,
@@ -110,29 +112,15 @@ export default function App() {
         theme,
         updated_at: new Date()
       };
-
       const { error } = await supabase.from('user_state').upsert(updates);
       if (error) console.error('Error saving data:', error);
     };
-
     saveData();
   }, [owners, categories, recurringBills, savingsGoals, monthlyData, startingBalances, appStartDate, theme, session]);
 
-  // --- THEME EFFECT ---
   useEffect(() => { document.body.setAttribute('data-theme', theme); }, [theme]);
 
-  // --- RENDER ---
-  if (!session) return <Auth />;
-  if (isLoadingData) return <div style={{height: '100vh', display:'flex', justifyContent:'center', alignItems:'center', background: 'var(--bg)', color:'var(--text)'}}><Loader2 className="spin" size={40}/></div>;
-
-  // ... (Rest of logic is mostly identical, just remove localStorage calls) ...
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState('onetime'); 
-  const [modalData, setModalData] = useState({ owner: '', columnId: '', name: '', amount: '', goalId: null, category: 'other' });
-  const [isClosingOpen, setIsClosingOpen] = useState(false);
-  const [closingBalances, setClosingBalances] = useState({});
-
-  // ... (New month init effect) ...
+  // Init Month Effect
   useEffect(() => {
     if (!monthlyData[monthKey]) {
       const clonedBills = recurringBills.map(b => ({ ...b, snapshotId: `${monthKey}-${b.id}-${Math.random().toString(36).substring(7)}`, isPaid: false, originalOwner: b.owner, category: b.category || 'other' }));
@@ -140,8 +128,9 @@ export default function App() {
       const clonedGoals = activeGoals.map(g => ({ id: `goal-${g.id}`, snapshotId: `${monthKey}-goal-${g.id}-${Math.random().toString(36).substring(7)}`, name: `🎯 ${g.name}`, amount: g.monthlyMin, dueDate: 28, columnId: 'pay2', owner: g.owner, isPaid: false, isSavings: true, goalId: g.id, originalOwner: g.owner, category: 'savings' }));
       setMonthlyData(prev => ({ ...prev, [monthKey]: { bills: [...clonedBills, ...clonedGoals], incomes: {}, todos: [] } }));
     }
-  }, [monthKey, recurringBills, savingsGoals, monthlyData]); // Dependency array keeps this reactive
+  }, [monthKey, recurringBills, savingsGoals, monthlyData]);
 
+  // --- Calculations ---
   const currentMonthData = monthlyData[monthKey] || { bills: [], incomes: {}, todos: [] };
   const currentBills = currentMonthData.bills || [];
   const currentIncomes = currentMonthData.incomes || {};
@@ -186,8 +175,8 @@ export default function App() {
   const CustomTooltip = ({ active, payload }) => { if (active && payload && payload.length) { const item = payload[0]; const originalData = item.payload; return ( <div className="chart-tooltip"> <p className="label">{item.name || item.dataKey}</p> <p className="value">${item.value.toFixed(0)}</p> {originalData.share !== undefined && ( <p style={{fontSize: '0.85rem', color: 'var(--accent)', marginTop: 4, fontWeight: 600}}> {(originalData.share * 100).toFixed(1)}% </p> )} </div> ); } return null; };
   const renderChartContent = (type) => { if (type === 'breakdown') { return ( <ResponsiveContainer width="100%" height="100%"> <PieChart> <Pie data={generatePieData()} cx="50%" cy="50%" innerRadius="45%" outerRadius="70%" paddingAngle={5} dataKey="value"> {generatePieData().map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)} </Pie> <Tooltip content={<CustomTooltip />} isAnimationActive={false} /> <Legend verticalAlign="bottom" height={36}/> </PieChart> </ResponsiveContainer> ); } if (type === 'cashflow') { return ( <ResponsiveContainer width="100%" height="100%"> <BarChart data={generateIncomeVsExpenseData()} margin={{top: 20, right: 30, left: 0, bottom: 5}}> <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/> <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false}/> <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`}/> <Tooltip content={<CustomTooltip />} cursor={{fill: 'var(--bg)'}} isAnimationActive={false}/> <Bar dataKey="amount" radius={[4, 4, 0, 0]}> {generateIncomeVsExpenseData().map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)} </Bar> </BarChart> </ResponsiveContainer> ); } if (type === 'burden') { return ( <ResponsiveContainer width="100%" height="100%"> <BarChart data={generateBurdenData()} margin={{top: 20, right: 30, left: 0, bottom: 5}}> <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/> <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false}/> <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`}/> <Tooltip content={<CustomTooltip />} cursor={{fill: 'var(--bg)'}} isAnimationActive={false}/> <Legend verticalAlign="top" height={36}/> <Bar dataKey="Fixed" stackId="a" fill="#ef4444" radius={[0, 0, 4, 4]} name="Fixed Bills"/> <Bar dataKey="Free" stackId="a" fill="#22c55e" radius={[4, 4, 0, 0]} name="Free Cash"/> </BarChart> </ResponsiveContainer> ); } if (type === 'trend') { return ( <ResponsiveContainer width="100%" height="100%"> <ComposedChart data={generateTrendData()} margin={{top: 20, right: 30, left: 0, bottom: 5}}> <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/> <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false}/> <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`}/> <Tooltip content={<CustomTooltip />} isAnimationActive={false} /> <Legend verticalAlign="top" height={36}/> <Area type="monotone" dataKey="Income" fill="rgba(34, 197, 94, 0.1)" stroke="#22c55e" strokeWidth={2} name="Total Income"/> <Line type="monotone" dataKey="Expenses" stroke="#ef4444" strokeWidth={2} dot={{r: 4}} name="Total Expenses"/> </ComposedChart> </ResponsiveContainer> ); } };
 
-  // --- ACTIONS ---
-  const handleSignOut = async () => { await supabase.auth.signOut(); setSession(null); }; // LOGOUT
+  // --- Actions ---
+  const handleSignOut = async () => { await supabase.auth.signOut(); setSession(null); }; 
   const openClosingModal = () => { const initial = {}; owners.filter(o => o !== 'Shared').forEach(o => { initial[o] = getPersonStats(o).totalFree; }); setClosingBalances(initial); setIsClosingOpen(true); };
   const handleCloseBooks = (e) => { e.preventDefault(); setMonthlyData(prev => ({ ...prev, [monthKey]: { ...prev[monthKey], closingBalances: closingBalances } })); setIsClosingOpen(false); };
   const handleReopenBooks = () => { if (window.confirm("Re-opening will revert balances to their calculated values. Are you sure?")) { setMonthlyData(prev => { const updatedMonth = { ...prev[monthKey] }; delete updatedMonth.closingBalances; return { ...prev, [monthKey]: updatedMonth }; }); } };
@@ -212,8 +201,13 @@ export default function App() {
   const openExtraSavingsModal = (goal) => { setModalType('extraSavings'); setModalData({ owner: goal.owner, columnId: 'pay1', name: `Extra: ${goal.name}`, amount: '', goalId: goal.id, category: 'savings' }); setIsModalOpen(true); };
   const changeMonth = (offset) => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + offset); setCurrentDate(newDate); };
 
+  // --- RENDER BLOCK (Must be LAST) ---
+  if (!session) return <Auth />;
+  if (isLoadingData) return <div style={{height: '100vh', display:'flex', justifyContent:'center', alignItems:'center', background: 'var(--bg)', color:'var(--text)'}}><Loader2 className="spin" size={40}/></div>;
+
   return (
     <div className="app-container">
+      {/* ... (Sidebar & Main Content) ... */}
       <nav className="sidebar">
         <div className="logo"><Wallet size={28} /><span>BudgetFlow</span></div>
         <button className={`nav-item ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}><LayoutDashboard size={20} /> Dashboard</button>
@@ -221,12 +215,10 @@ export default function App() {
         <button className={`nav-item ${view === 'bills' ? 'active' : ''}`} onClick={() => setView('bills')}><Receipt size={20} /> Recurring Bills</button>
         <button className={`nav-item ${view === 'goals' ? 'active' : ''}`} onClick={() => setView('goals')}><Target size={20} /> Savings Goals</button>
         <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}><SettingsIcon size={20} /> Settings</button>
-        {/* LOGOUT BUTTON */}
         <button className="nav-item" onClick={handleSignOut} style={{marginTop: 'auto', color: 'var(--red)'}}><LogOut size={20} /> Sign Out</button>
       </nav>
 
       <main className="main-content">
-        {/* ... (View render logic same as before, just uses `session` context now) ... */}
         {view === 'dashboard' && (
           <div className="animate-fade-in">
             <div className="month-selector"><button onClick={() => changeMonth(-1)}><ChevronLeft size={24}/></button><h2>{monthLabel}</h2><button onClick={() => changeMonth(1)}><ChevronRight size={24}/></button></div>
@@ -269,7 +261,7 @@ export default function App() {
         {view === 'settings' && <Settings currentTheme={theme} setTheme={setTheme} owners={owners} onAddOwner={setOwners} onDeleteOwner={(name) => setOwners(owners.filter(o => o !== name))} appStartDate={appStartDate} startingBalances={startingBalances} setStartingBalances={setStartingBalances} categories={categories} setCategories={setCategories} />}
       </main>
 
-      {/* ... (Modals are identical, just kept for completeness) ... */}
+      {/* MODALS */}
       {isModalOpen && (<div className="modal-overlay"><div className="modal-card animate-fade-in"><div className="modal-header"><h3 style={{margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8}}>{modalType === 'onetime' ? <Plus size={20}/> : <Target size={20}/>} {modalType === 'onetime' ? 'Add One-Time Bill' : 'Throw Extra Cash'}</h3><button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button></div><form onSubmit={handleModalSubmit} className="add-bill-form"><p className="subtitle" style={{marginBottom: 20, marginTop: 0}}>{modalType === 'onetime' ? `Adding to ${modalData.owner}'s check.` : `How much extra are you putting towards ${modalData.name.replace('Extra: ', '')}?`}</p>{modalType === 'onetime' && (<input autoFocus className="input-field" placeholder="What is the expense?" value={modalData.name} onChange={(e) => setModalData({ ...modalData, name: e.target.value })} />)}<div className="form-row"><input type="number" autoFocus={modalType !== 'onetime'} className="input-field" placeholder="Amount ($)" value={modalData.amount} onChange={(e) => setModalData({ ...modalData, amount: e.target.value })} /><select className="input-field" value={modalData.columnId} onChange={(e) => setModalData({ ...modalData, columnId: e.target.value })}><option value="pay1">From Paycheck 1</option><option value="pay2">From Paycheck 2</option></select></div>{modalType === 'onetime' && (<div style={{marginTop: 10}}><select className="input-field" value={modalData.category} onChange={e => setModalData({...modalData, category: e.target.value})}>{Object.entries(categories).map(([key, cat]) => (<option key={key} value={key}>{cat.label}</option>))}</select></div>)}<div className="form-actions" style={{justifyContent: 'flex-end', marginTop: 15}}><button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="btn-primary">{modalType === 'onetime' ? 'Add Expense' : 'Add Payment'}</button></div></form></div></div>)}
       {expandedChart && (<div className="chart-modal-overlay"><div className="chart-modal-content animate-fade-in"><button className="btn-close-chart" onClick={() => setExpandedChart(null)}><X size={24} /></button><div className="modal-chart-header" style={{marginBottom: 20, display: 'flex', alignItems: 'center', gap: 15}}><h2 style={{margin: 0}}>{expandedChart === 'breakdown' && 'Spending Breakdown'}{expandedChart === 'cashflow' && 'Money In vs Money Out'}{expandedChart === 'burden' && 'Fixed Bills vs Free Cash'}{expandedChart === 'trend' && '6-Month Financial Trend'}</h2>{expandedChart === 'breakdown' && (<div className="select-wrapper-small" style={{marginRight: 4}}><Layers size={14} className="icon"/><select value={chartGroupBy} onChange={(e) => setChartGroupBy(e.target.value)}><option value="owner">By Owner</option><option value="category">By Category</option></select></div>)}{expandedChart === 'breakdown' && (<div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={breakdownFilter} onChange={(e) => setBreakdownFilter(e.target.value)}><option value="All">All Owners</option>{owners.filter(o => o !== 'Shared').map(o => <option key={o} value={o}>{o}</option>)}</select></div>)} {expandedChart === 'cashflow' && (<div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={cashFlowFilter} onChange={(e) => setCashFlowFilter(e.target.value)}><option value="All">Household</option>{owners.filter(o => o !== 'Shared').map(o => <option key={o} value={o}>{o}</option>)}</select></div>)}</div><div style={{flex: 1, width: '100%', minHeight: 0}}>{renderChartContent(expandedChart)}</div></div></div>)}
       {isClosingOpen && (
@@ -288,7 +280,7 @@ export default function App() {
   );
 }
 
-// ... (Sub-components) ...
+// ... Sub-components remain identical ...
 function DayPicker({ value, onChange }) { const [isOpen, setIsOpen] = useState(false); const wrapperRef = useRef(null); useEffect(() => { function handleClickOutside(event) { if (wrapperRef.current && !wrapperRef.current.contains(event.target)) { setIsOpen(false); } } document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, [wrapperRef]); const handleDaySelect = (day) => { onChange(day); setIsOpen(false); }; return (<div className="day-picker-container" ref={wrapperRef}><button className="day-picker-trigger" onClick={() => setIsOpen(!isOpen)}><CalendarIcon size={12} className="icon" /><span className="value">{value ? getOrdinal(value) : 'Date'}</span><ChevronDown size={10} className="arrow" /></button>{isOpen && (<div className="day-picker-popover animate-fade-in"><div className="day-grid">{Array.from({ length: 31 }, (_, i) => i + 1).map(day => (<button key={day} className={`day-btn ${value == day ? 'active' : ''}`} onClick={() => handleDaySelect(day)}>{day}</button>))}</div><button className="btn-clear-date" onClick={() => handleDaySelect('')}>Clear Date</button></div>)}</div>); }
 function ChecklistWidget({ title, todos, onAdd, onToggle, onDelete, variant = 'global' }) { const [text, setText] = useState(''); const handleSubmit = (e) => { e.preventDefault(); if (text.trim()) { onAdd(text); setText(''); } }; return (<div className={`checklist-widget ${variant}`}>{title && <h4 className="checklist-title">{title}</h4>}<div className="checklist-items">{todos.map(todo => (<div key={todo.id} className="checklist-item"><button onClick={() => onToggle(todo.id)} className="btn-check">{todo.completed ? <CheckCircle2 size={16} color="var(--green)"/> : <Circle size={16} color="var(--text-dim)"/>}</button><span className={todo.completed ? 'completed' : ''}>{todo.text}</span><button onClick={() => onDelete(todo.id)} className="btn-del"><Trash2 size={14}/></button></div>))}</div><form onSubmit={handleSubmit} className="checklist-form"><input placeholder={variant === 'mini' ? "Add note..." : "Add a reminder..."} value={text} onChange={(e) => setText(e.target.value)} /><button type="submit"><Plus size={14}/></button></form></div>); }
 function BalanceSection({ title, owner, bills, isShared, onTogglePaid, onDelete, onAddOneTime, onBalance, onAddTodo, todos, onToggleTodo, onDeleteTodo }) { const sectionBills = bills.filter(b => b.owner === owner); const p1Bills = sectionBills.filter(b => b.columnId === 'pay1'); const p2Bills = sectionBills.filter(b => b.columnId === 'pay2'); const p1Total = p1Bills.reduce((sum, b) => sum + b.amount, 0); const p2Total = p2Bills.reduce((sum, b) => sum + b.amount, 0); return (<div className="balance-section"><div className="section-header-row"><h3 style={{color: isShared ? 'var(--accent)' : 'var(--text)'}}>{title}</h3><button className="btn-icon-only" onClick={() => onBalance(owner)} title={`Auto-Balance ${owner}'s Bills Only`} style={{marginLeft: 10}}><RefreshCw size={16} /></button></div><div className="balance-grid"><Droppable droppableId={`${owner}-pay1`}>{(provided, snapshot) => (<div className={`mini-column ${snapshot.isDraggingOver ? 'drag-active' : ''}`} ref={provided.innerRef} {...provided.droppableProps}><div className="mini-header"><div><span>Paycheck 1</span><button className="btn-add-quick" onClick={() => onAddOneTime(owner, 'pay1')} title="Add one-time bill"><Plus size={14}/></button></div><span className="mini-total">Bills: -${p1Total}</span></div>{p1Bills.map((bill, index) => <BillCard key={bill.snapshotId} bill={bill} index={index} onTogglePaid={onTogglePaid} onDelete={onDelete}/>)}{provided.placeholder}<div style={{marginTop: 15}}><ChecklistWidget todos={todos.filter(t => t.columnId === 'pay1')} onAdd={(text) => onAddTodo(text, 'pay1')} onToggle={onToggleTodo} onDelete={onDeleteTodo} variant="mini"/></div></div>)}</Droppable><Droppable droppableId={`${owner}-pay2`}>{(provided, snapshot) => (<div className={`mini-column ${snapshot.isDraggingOver ? 'drag-active' : ''}`} ref={provided.innerRef} {...provided.droppableProps}><div className="mini-header"><div><span>Paycheck 2</span><button className="btn-add-quick" onClick={() => onAddOneTime(owner, 'pay2')} title="Add one-time bill"><Plus size={14}/></button></div><span className="mini-total">Bills: -${p2Total}</span></div>{p2Bills.map((bill, index) => <BillCard key={bill.snapshotId} bill={bill} index={index} onTogglePaid={onTogglePaid} onDelete={onDelete}/>)}{provided.placeholder}<div style={{marginTop: 15}}><ChecklistWidget todos={todos.filter(t => t.columnId === 'pay2')} onAdd={(text) => onAddTodo(text, 'pay2')} onToggle={onToggleTodo} onDelete={onDeleteTodo} variant="mini"/></div></div>)}</Droppable></div></div>); }
