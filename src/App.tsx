@@ -11,17 +11,21 @@ import Forecast from './Forecast';
 import { autoBalanceBudget } from './balanceEngine';
 import './index.css';
 
-// --- Constants & Helpers ---
+// --- CONSTANTS & HELPERS ---
 export const DEFAULT_CATEGORIES = { housing: { label: 'Housing', color: '#ef4444' }, transport: { label: 'Transport', color: '#f97316' }, utilities: { label: 'Utilities', color: '#eab308' }, debt: { label: 'Debt', color: '#8b5cf6' }, lifestyle: { label: 'Lifestyle', color: '#ec4899' }, shopping: { label: 'Shopping', color: '#06b6d4' }, health: { label: 'Health', color: '#10b981' }, savings: { label: 'Savings', color: '#22c55e' }, other: { label: 'Other', color: '#64748b' } };
 export function getCategoryIcon(catId) { const size = 14; switch(catId) { case 'housing': return <Home size={size}/>; case 'transport': return <Car size={size}/>; case 'utilities': return <Zap size={size}/>; case 'debt': return <CreditCard size={size}/>; case 'lifestyle': return <Smile size={size}/>; case 'shopping': return <ShoppingBag size={size}/>; case 'health': return <Activity size={size}/>; case 'savings': return <Landmark size={size}/>; case 'other': return <HelpCircle size={size}/>; default: return <Tag size={size}/>; } }
 export function getOrdinal(n) { const j = n % 10, k = n % 100; if (j == 1 && k != 11) return n + "st"; if (j == 2 && k != 12) return n + "nd"; if (j == 3 && k != 13) return n + "rd"; return n + "th"; }
 
 export default function App() {
-  // 1. Session State
+  // ==========================================
+  // 1. ALL HOOKS MUST BE DECLARED HERE (TOP)
+  // ==========================================
+
+  // --- Session & Loading ---
   const [session, setSession] = useState(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-  // 2. View State
+  // --- UI State ---
   const [view, setView] = useState('dashboard');
   const [dashboardMode, setDashboardMode] = useState('board');
   const [expandedChart, setExpandedChart] = useState(null); 
@@ -29,7 +33,7 @@ export default function App() {
   const [chartGroupBy, setChartGroupBy] = useState('owner'); 
   const [cashFlowFilter, setCashFlowFilter] = useState('All');
   
-  // 3. Data State
+  // --- Data State ---
   const [theme, setTheme] = useState('dark');
   const [owners, setOwners] = useState(['Shared', 'Randy', 'Sam']);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -40,7 +44,7 @@ export default function App() {
   const [savingsGoals, setSavingsGoals] = useState([]);
   const [monthlyData, setMonthlyData] = useState({});
 
-  // 4. Modal/Form State (MOVED UP to fix Error #310)
+  // --- Modal & Form State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState('onetime'); 
   const [modalData, setModalData] = useState({ owner: '', columnId: '', name: '', amount: '', goalId: null, category: 'other' });
@@ -48,10 +52,15 @@ export default function App() {
   const [closingBalances, setClosingBalances] = useState({});
   const [newTodoText, setNewTodoText] = useState('');
 
+  // --- Derived Constants ---
   const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
   const monthLabel = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-  // --- Effects ---
+  // ==========================================
+  // 2. EFFECTS (DATA LOADING & SAVING)
+  // ==========================================
+
+  // A. Load User Data (Auth Listener)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -71,9 +80,10 @@ export default function App() {
   const loadUserData = async (userId) => {
     setIsLoadingData(true);
     try {
-      const { data, error } = await supabase.from('user_state').select('*').eq('id', userId).single();
+      // FIX 406 ERROR: Use maybeSingle() instead of single()
+      const { data, error } = await supabase.from('user_state').select('*').eq('id', userId).maybeSingle();
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 = Row not found (New user), which is fine
+      if (error) {
         console.error('Error loading data:', error);
       }
 
@@ -87,7 +97,7 @@ export default function App() {
         if (data.app_start_date) setAppStartDate(data.app_start_date);
         if (data.theme) setTheme(data.theme);
       } else {
-        // Initialize new user defaults
+        // No data found? This is a new user. Initialize defaults.
         setAppStartDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`);
       }
     } catch (err) {
@@ -97,8 +107,10 @@ export default function App() {
     }
   };
 
+  // B. Save User Data (Triggered on change)
   useEffect(() => {
     if (!session || isLoadingData) return;
+
     const saveData = async () => {
       const updates = {
         id: session.user.id,
@@ -112,25 +124,58 @@ export default function App() {
         theme,
         updated_at: new Date()
       };
+
       const { error } = await supabase.from('user_state').upsert(updates);
       if (error) console.error('Error saving data:', error);
     };
+
     saveData();
   }, [owners, categories, recurringBills, savingsGoals, monthlyData, startingBalances, appStartDate, theme, session]);
 
+  // C. Apply Theme
   useEffect(() => { document.body.setAttribute('data-theme', theme); }, [theme]);
 
-  // Init Month Effect
+  // D. Initialize New Month (MOVED UP - Was causing the crash)
   useEffect(() => {
     if (!monthlyData[monthKey]) {
-      const clonedBills = recurringBills.map(b => ({ ...b, snapshotId: `${monthKey}-${b.id}-${Math.random().toString(36).substring(7)}`, isPaid: false, originalOwner: b.owner, category: b.category || 'other' }));
+      const clonedBills = recurringBills.map(b => ({ 
+        ...b, 
+        snapshotId: `${monthKey}-${b.id}-${Math.random().toString(36).substring(7)}`, 
+        isPaid: false, 
+        originalOwner: b.owner, 
+        category: b.category || 'other' 
+      }));
+      
       const activeGoals = savingsGoals.filter(g => g.totalPaid < g.target);
-      const clonedGoals = activeGoals.map(g => ({ id: `goal-${g.id}`, snapshotId: `${monthKey}-goal-${g.id}-${Math.random().toString(36).substring(7)}`, name: `🎯 ${g.name}`, amount: g.monthlyMin, dueDate: 28, columnId: 'pay2', owner: g.owner, isPaid: false, isSavings: true, goalId: g.id, originalOwner: g.owner, category: 'savings' }));
-      setMonthlyData(prev => ({ ...prev, [monthKey]: { bills: [...clonedBills, ...clonedGoals], incomes: {}, todos: [] } }));
+      const clonedGoals = activeGoals.map(g => ({
+        id: `goal-${g.id}`, 
+        snapshotId: `${monthKey}-goal-${g.id}-${Math.random().toString(36).substring(7)}`, 
+        name: `🎯 ${g.name}`, 
+        amount: g.monthlyMin, 
+        dueDate: 28, 
+        columnId: 'pay2', 
+        owner: g.owner, 
+        isPaid: false, 
+        isSavings: true, 
+        goalId: g.id, 
+        originalOwner: g.owner, 
+        category: 'savings' 
+      }));
+
+      setMonthlyData(prev => ({ 
+        ...prev, 
+        [monthKey]: { 
+          bills: [...clonedBills, ...clonedGoals], 
+          incomes: {}, 
+          todos: [] 
+        } 
+      }));
     }
   }, [monthKey, recurringBills, savingsGoals, monthlyData]);
 
-  // --- Calculations ---
+  // ==========================================
+  // 3. HELPER LOGIC (Calculations)
+  // ==========================================
   const currentMonthData = monthlyData[monthKey] || { bills: [], incomes: {}, todos: [] };
   const currentBills = currentMonthData.bills || [];
   const currentIncomes = currentMonthData.incomes || {};
@@ -201,13 +246,14 @@ export default function App() {
   const openExtraSavingsModal = (goal) => { setModalType('extraSavings'); setModalData({ owner: goal.owner, columnId: 'pay1', name: `Extra: ${goal.name}`, amount: '', goalId: goal.id, category: 'savings' }); setIsModalOpen(true); };
   const changeMonth = (offset) => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + offset); setCurrentDate(newDate); };
 
-  // --- RENDER BLOCK (Must be LAST) ---
+  // ==========================================
+  // 4. RENDER GATE (MUST BE LAST)
+  // ==========================================
   if (!session) return <Auth />;
   if (isLoadingData) return <div style={{height: '100vh', display:'flex', justifyContent:'center', alignItems:'center', background: 'var(--bg)', color:'var(--text)'}}><Loader2 className="spin" size={40}/></div>;
 
   return (
     <div className="app-container">
-      {/* ... (Sidebar & Main Content) ... */}
       <nav className="sidebar">
         <div className="logo"><Wallet size={28} /><span>BudgetFlow</span></div>
         <button className={`nav-item ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}><LayoutDashboard size={20} /> Dashboard</button>
