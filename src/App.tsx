@@ -18,7 +18,7 @@ export function getOrdinal(n) { const j = n % 10, k = n % 100; if (j == 1 && k !
 
 export default function App() {
   // ==========================================
-  // 1. ALL HOOKS MUST BE DECLARED HERE (TOP)
+  // 1. ALL HOOKS MUST BE DECLARED HERE (TOP) V1
   // ==========================================
 
   // --- Session & Loading ---
