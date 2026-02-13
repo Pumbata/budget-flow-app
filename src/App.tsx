@@ -10,6 +10,7 @@ import Settings from './Settings';
 import Forecast from './Forecast'; 
 import { autoBalanceBudget } from './balanceEngine';
 import './index.css';
+import Landing from './Landing';
 
 // --- CONSTANTS & HELPERS ---
 export const DEFAULT_CATEGORIES = { housing: { label: 'Housing', color: '#ef4444' }, transport: { label: 'Transport', color: '#f97316' }, utilities: { label: 'Utilities', color: '#eab308' }, debt: { label: 'Debt', color: '#8b5cf6' }, lifestyle: { label: 'Lifestyle', color: '#ec4899' }, shopping: { label: 'Shopping', color: '#06b6d4' }, health: { label: 'Health', color: '#10b981' }, savings: { label: 'Savings', color: '#22c55e' }, other: { label: 'Other', color: '#64748b' } };
@@ -24,6 +25,8 @@ export default function App() {
   // --- Session & Loading ---
   const [session, setSession] = useState(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
+// NEW: Track what unauthenticated users see
+  const [publicRoute, setPublicRoute] = useState('landing');  
 
   // --- UI State ---
   const [view, setView] = useState('dashboard');
@@ -249,9 +252,15 @@ export default function App() {
   // ==========================================
   // 4. RENDER GATE (MUST BE LAST)
   // ==========================================
-  if (!session) return <Auth />;
-  if (isLoadingData) return <div style={{height: '100vh', display:'flex', justifyContent:'center', alignItems:'center', background: 'var(--bg)', color:'var(--text)'}}><Loader2 className="spin" size={40}/></div>;
+  if (!session) {
+    if (publicRoute === 'landing') {
+      return <Landing onSignIn={() => setPublicRoute('signin')} onSignUp={() => setPublicRoute('signup')} />;
+    }
+    return <Auth initialMode={publicRoute} onBack={() => setPublicRoute('landing')} />;
+  }
 
+  if (isLoadingData) return <div style={{height: '100vh', display:'flex', justifyContent:'center', alignItems:'center', background: 'var(--bg)', color:'var(--text)'}}><Loader2 className="spin" size={40}/></div>;
+  
   return (
     <div className="app-container">
       <nav className="sidebar">
