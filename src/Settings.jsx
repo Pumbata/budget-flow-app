@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Moon, Sun, UserPlus, Trash2, Tags, Plus, Coffee, Home, Users } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Moon, Sun, UserPlus, Trash2, Tags, Plus, Coffee, Home, Users, Download, Upload } from 'lucide-react';
 
 export default function Settings({ 
   currentTheme, setTheme, 
@@ -8,11 +8,15 @@ export default function Settings({
   jointPoolName, setJointPoolName, 
   appStartDate, 
   startingBalances, setStartingBalances, 
-  categories, setCategories 
+  categories, setCategories,
+  recurringBills, setRecurringBills,
+  savingsGoals, setSavingsGoals,
+  monthlyData, setMonthlyData
 }) {
   const [newOwnerName, setNewOwnerName] = useState('');
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState('#6366f1');
+  const fileInputRef = useRef(null);
 
   const handleAddOwner = (e) => {
     e.preventDefault();
@@ -44,6 +48,63 @@ export default function Settings({
     const newCats = { ...categories };
     delete newCats[catId];
     setCategories(newCats);
+  };
+
+  // --- EXPORT DATA ---
+  const handleExportData = () => {
+    const dataToExport = {
+      owners,
+      hasJointPool,
+      jointPoolName,
+      categories,
+      appStartDate,
+      startingBalances,
+      recurringBills,
+      savingsGoals,
+      monthlyData
+    };
+    
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `omegabudget-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // --- IMPORT DATA ---
+  const handleImportData = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target.result);
+        
+        if (window.confirm("WARNING: This will completely overwrite your current dashboard and cloud save. Are you sure you want to restore from this backup?")) {
+          if (importedData.owners) setOwners(importedData.owners);
+          if (importedData.hasJointPool !== undefined) setHasJointPool(importedData.hasJointPool);
+          if (importedData.jointPoolName) setJointPoolName(importedData.jointPoolName);
+          if (importedData.categories) setCategories(importedData.categories);
+          if (importedData.startingBalances) setStartingBalances(importedData.startingBalances);
+          if (importedData.recurringBills) setRecurringBills(importedData.recurringBills);
+          if (importedData.savingsGoals) setSavingsGoals(importedData.savingsGoals);
+          if (importedData.monthlyData) setMonthlyData(importedData.monthlyData);
+          
+          alert("Backup restored successfully!");
+        }
+      } catch (err) {
+        alert("Error reading backup file. Please make sure it is a valid OmegaBudget .json file.");
+        console.error(err);
+      }
+      // Reset input so they can upload the same file again if needed
+      e.target.value = null; 
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -136,13 +197,36 @@ export default function Settings({
           </form>
         </div>
 
-        {/* DATA MANAGEMENT */}
+        {/* DATA MANAGEMENT & OFFLINE BACKUPS */}
         <div className="card settings-card">
           <h3>Data Management</h3>
+          
+          <div style={{ background: 'var(--bg)', padding: 15, borderRadius: 8, marginBottom: 20, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '0.95rem' }}>Offline Backups</h4>
+            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginBottom: 15 }}>
+              Download a complete copy of your dashboard state. You can use this to restore your board if you ever make a mistake.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn-primary" onClick={handleExportData} style={{ flex: 1, justifyContent: 'center' }}>
+                <Download size={16} style={{ marginRight: 6 }}/> Export Data
+              </button>
+              
+              <input 
+                type="file" 
+                accept=".json" 
+                style={{ display: 'none' }} 
+                ref={fileInputRef} 
+                onChange={handleImportData} 
+              />
+              <button className="btn-cancel" onClick={() => fileInputRef.current.click()} style={{ flex: 1, justifyContent: 'center' }}>
+                <Upload size={16} style={{ marginRight: 6 }}/> Restore Data
+              </button>
+            </div>
+          </div>
+
           <div className="form-group">
             <label>App Start Month (YYYY-MM)</label>
             <input type="month" className="input-field" value={appStartDate} disabled title="Locked for safety." />
-            <p className="hint">This is the anchor date for all calculations.</p>
           </div>
           
           <div style={{marginTop: 20}}>
