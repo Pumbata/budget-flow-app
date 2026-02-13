@@ -261,8 +261,18 @@ export default function App() {
   const changeMonth = (offset) => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + offset); setCurrentDate(newDate); };
   const handleOnboardingComplete = ({ finalSharedName, finalOwners, finalBills }) => {
     setSharedName(finalSharedName);
-    setOwners(finalOwners);
-    setRecurringBills(finalBills);
+    
+    // FORCE internal logic to maintain 'Shared' as the base reference
+    const safeOwners = ['Shared', ...finalOwners.filter(o => o !== finalSharedName && o !== 'Shared')];
+    setOwners(safeOwners);
+    
+    // Map initial bills to 'Shared' if they were assigned to the custom name
+    const safeBills = finalBills.map(b => ({
+      ...b, 
+      owner: b.owner === finalSharedName ? 'Shared' : b.owner 
+    }));
+    
+    setRecurringBills(safeBills);
     setShowOnboarding(false);
   };
   const handleUpdatePassword = async (e) => {
