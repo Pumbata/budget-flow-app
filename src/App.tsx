@@ -264,7 +264,7 @@ export default function App() {
   return (
     <div className="app-container">
       <nav className="sidebar">
-        <div className="logo"><Wallet size={28} /><span>OmegaBudget</span></div>
+        <div className="logo"><img src="/logo.png" alt="OmegaBudget Logo" style={{ width: '28px', height: '28px' }} /><span>OmegaBudget</span></div>
         <button className={`nav-item ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}><LayoutDashboard size={20} /> Dashboard</button>
         <button className={`nav-item ${view === 'forecast' ? 'active' : ''}`} onClick={() => setView('forecast')}><CalendarClock size={20} /> Forecast</button>
         <button className={`nav-item ${view === 'bills' ? 'active' : ''}`} onClick={() => setView('bills')}><Receipt size={20} /> Recurring Bills</button>

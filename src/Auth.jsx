@@ -40,7 +40,7 @@ export default function Auth({ initialMode = 'signin', onBack }) {
 
       <div className="card" style={{ padding: 40, width: '100%', maxWidth: 400, textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20, color: 'var(--accent)' }}>
-          <Wallet size={40} />
+        <img src="/logo.png" alt="OmegaBudget Logo" style={{ width: '40px', height: '40px' }} />
           <h1 style={{ fontSize: '1.8rem', margin: 0, letterSpacing: '-1px' }}>OmegaBudget</h1>
         </div>
         

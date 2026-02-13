@@ -8,7 +8,7 @@ export default function Landing({ onSignIn, onSignUp }) {
       {/* Top Navigation */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--accent)' }}>
-          <Wallet size={32} />
+        <img src="/logo.png" alt="OmegaBudget Logo" style={{ width: '32px', height: '32px' }} />
           <span style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text)' }}>OmegaBudget</span>
         </div>
         <div style={{ display: 'flex', gap: 15 }}>
