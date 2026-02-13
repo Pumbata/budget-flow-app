@@ -26,7 +26,6 @@ export default function App() {
   // --- Session & Loading ---
   const [session, setSession] = useState(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
-// NEW: Track what unauthenticated users see
   const [publicRoute, setPublicRoute] = useState('landing');  
 
   // --- UI State ---
@@ -39,7 +38,10 @@ export default function App() {
   
   // --- Data State ---
   const [theme, setTheme] = useState('dark');
-  const [owners, setOwners] = useState(['Shared', 'Randy', 'Sam']);
+  const [owners, setOwners] = useState(['Shared', 'User 1']);
+  const [sharedName, setSharedName] = useState('Shared'); // NEW
+  const [isEditingSharedName, setIsEditingSharedName] = useState(false); // NEW
+  const [tempSharedName, setTempSharedName] = useState(''); // NEW
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [currentDate, setCurrentDate] = useState(new Date()); 
   const [appStartDate, setAppStartDate] = useState('');
@@ -55,7 +57,7 @@ export default function App() {
   const [isClosingOpen, setIsClosingOpen] = useState(false);
   const [closingBalances, setClosingBalances] = useState({});
   const [newTodoText, setNewTodoText] = useState('');
-
+  
   // --- Derived Constants ---
   const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
   const monthLabel = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -84,15 +86,13 @@ export default function App() {
   const loadUserData = async (userId) => {
     setIsLoadingData(true);
     try {
-      // FIX 406 ERROR: Use maybeSingle() instead of single()
       const { data, error } = await supabase.from('user_state').select('*').eq('id', userId).maybeSingle();
       
-      if (error) {
-        console.error('Error loading data:', error);
-      }
+      if (error) console.error('Error loading data:', error);
 
       if (data) {
         if (data.owners) setOwners(data.owners);
+        if (data.shared_name) setSharedName(data.shared_name); // LOAD CUSTOM NAME
         if (data.categories) setCategories(data.categories);
         if (data.recurring_bills) setRecurringBills(data.recurring_bills);
         if (data.savings_goals) setSavingsGoals(data.savings_goals);
@@ -101,7 +101,6 @@ export default function App() {
         if (data.app_start_date) setAppStartDate(data.app_start_date);
         if (data.theme) setTheme(data.theme);
       } else {
-        // No data found? This is a new user. Initialize defaults.
         setAppStartDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`);
       }
     } catch (err) {
@@ -119,6 +118,7 @@ export default function App() {
       const updates = {
         id: session.user.id,
         owners,
+        shared_name: sharedName, // SAVE CUSTOM NAME
         categories,
         recurring_bills: recurringBills,
         savings_goals: savingsGoals,
@@ -134,12 +134,12 @@ export default function App() {
     };
 
     saveData();
-  }, [owners, categories, recurringBills, savingsGoals, monthlyData, startingBalances, appStartDate, theme, session]);
+  }, [owners, sharedName, categories, recurringBills, savingsGoals, monthlyData, startingBalances, appStartDate, theme, session]);
 
   // C. Apply Theme
   useEffect(() => { document.body.setAttribute('data-theme', theme); }, [theme]);
 
-  // D. Initialize New Month (MOVED UP - Was causing the crash)
+  // D. Initialize New Month 
   useEffect(() => {
     if (!monthlyData[monthKey]) {
       const clonedBills = recurringBills.map(b => ({ 
@@ -217,7 +217,7 @@ export default function App() {
   const sharedP1 = currentBills.filter(b => b.owner === 'Shared' && b.columnId === 'pay1').reduce((sum, b) => sum + b.amount, 0); const sharedP2 = currentBills.filter(b => b.owner === 'Shared' && b.columnId === 'pay2').reduce((sum, b) => sum + b.amount, 0); const splitP1 = sharedP1 / peopleCount; const splitP2 = sharedP2 / peopleCount;
   const getPersonStats = (person) => { const inc1 = parseFloat(currentIncomes[`${person}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${person}_p2`] || 0); const incExtra = parseFloat(currentIncomes[`${person}_extra`] || 0); const pBills = currentBills.filter(b => b.owner === person); const myPersP1 = pBills.filter(b => b.columnId === 'pay1').reduce((sum, b) => sum + b.amount, 0); const myPersP2 = pBills.filter(b => b.columnId === 'pay2').reduce((sum, b) => sum + b.amount, 0); const due1 = myPersP1 + splitP1; const due2 = myPersP2 + splitP2; const free1 = inc1 - due1; const free2 = inc2 - due2; const rollover = getRollover(monthKey, person); const totalFree = free1 + free2 + incExtra + rollover; return { free1, free2, incExtra, rollover, totalFree, due1, due2 }; };
 
-  const generatePieData = () => { const ownerColors = ['#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#f43f5e', '#f59e0b']; let rawData = []; let scopeBills = currentBills; if (breakdownFilter !== 'All') { scopeBills = currentBills.filter(b => b.owner === breakdownFilter); } if (chartGroupBy === 'owner') { if (breakdownFilter === 'All') { let totalFreeCash = 0; const personalBillsData = []; owners.filter(o => o !== 'Shared').forEach((owner, idx) => { const stats = getPersonStats(owner); totalFreeCash += stats.totalFree; const persOnlyTotal = currentBills.filter(b => b.owner === owner).reduce((sum, b) => sum + b.amount, 0); if (persOnlyTotal > 0) personalBillsData.push({ name: `${owner}'s Bills`, value: persOnlyTotal, color: ownerColors[idx % ownerColors.length] }); }); rawData = [{ name: 'Shared Bills', value: sharedP1 + sharedP2, color: '#f59e0b' }, ...personalBillsData]; if (totalFreeCash > 0) rawData.push({ name: 'Total Free Cash', value: totalFreeCash, color: '#22c55e' }); } else { const stats = getPersonStats(breakdownFilter); rawData = scopeBills.map((b, idx) => ({ name: b.name, value: b.amount, color: ownerColors[idx % ownerColors.length] })); const mySharedShare = (sharedP1 + sharedP2) / peopleCount; if (mySharedShare > 0) rawData.push({ name: 'Shared Portion', value: mySharedShare, color: '#f59e0b' }); if (stats.totalFree > 0) rawData.push({ name: 'My Free Cash', value: stats.totalFree, color: '#22c55e' }); } } else { const categoryTotals = {}; Object.keys(categories).forEach(k => categoryTotals[k] = 0); scopeBills.forEach(b => { const cat = b.category && categories[b.category] ? b.category : 'other'; categoryTotals[cat] = (categoryTotals[cat] || 0) + b.amount; }); rawData = Object.keys(categoryTotals).filter(k => categoryTotals[k] > 0).map(k => ({ name: categories[k].label, value: categoryTotals[k], color: categories[k].color })); if (breakdownFilter === 'All') { let totalFree = 0; owners.filter(o => o !== 'Shared').forEach(o => totalFree += getPersonStats(o).totalFree); if (totalFree > 0) rawData.push({ name: 'Free Cash', value: totalFree, color: '#22c55e' }); } else { const stats = getPersonStats(breakdownFilter); if (stats.totalFree > 0) rawData.push({ name: 'Free Cash', value: stats.totalFree, color: '#22c55e' }); } } const filteredData = rawData.filter(d => d.value > 0); const totalValue = filteredData.reduce((sum, item) => sum + item.value, 0); return filteredData.map(item => ({ ...item, share: totalValue > 0 ? (item.value / totalValue) : 0 })); };
+  const generatePieData = () => { const ownerColors = ['#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#f43f5e', '#f59e0b']; let rawData = []; let scopeBills = currentBills; if (breakdownFilter !== 'All') { scopeBills = currentBills.filter(b => b.owner === breakdownFilter); } if (chartGroupBy === 'owner') { if (breakdownFilter === 'All') { let totalFreeCash = 0; const personalBillsData = []; owners.filter(o => o !== 'Shared').forEach((owner, idx) => { const stats = getPersonStats(owner); totalFreeCash += stats.totalFree; const persOnlyTotal = currentBills.filter(b => b.owner === owner).reduce((sum, b) => sum + b.amount, 0); if (persOnlyTotal > 0) personalBillsData.push({ name: `${owner}'s Bills`, value: persOnlyTotal, color: ownerColors[idx % ownerColors.length] }); }); rawData = [{ name: `${sharedName} Bills`, value: sharedP1 + sharedP2, color: '#f59e0b' }, ...personalBillsData]; if (totalFreeCash > 0) rawData.push({ name: 'Total Free Cash', value: totalFreeCash, color: '#22c55e' }); } else { const stats = getPersonStats(breakdownFilter); rawData = scopeBills.map((b, idx) => ({ name: b.name, value: b.amount, color: ownerColors[idx % ownerColors.length] })); const mySharedShare = (sharedP1 + sharedP2) / peopleCount; if (mySharedShare > 0) rawData.push({ name: `${sharedName} Portion`, value: mySharedShare, color: '#f59e0b' }); if (stats.totalFree > 0) rawData.push({ name: 'My Free Cash', value: stats.totalFree, color: '#22c55e' }); } } else { const categoryTotals = {}; Object.keys(categories).forEach(k => categoryTotals[k] = 0); scopeBills.forEach(b => { const cat = b.category && categories[b.category] ? b.category : 'other'; categoryTotals[cat] = (categoryTotals[cat] || 0) + b.amount; }); rawData = Object.keys(categoryTotals).filter(k => categoryTotals[k] > 0).map(k => ({ name: categories[k].label, value: categoryTotals[k], color: categories[k].color })); if (breakdownFilter === 'All') { let totalFree = 0; owners.filter(o => o !== 'Shared').forEach(o => totalFree += getPersonStats(o).totalFree); if (totalFree > 0) rawData.push({ name: 'Free Cash', value: totalFree, color: '#22c55e' }); } else { const stats = getPersonStats(breakdownFilter); if (stats.totalFree > 0) rawData.push({ name: 'Free Cash', value: stats.totalFree, color: '#22c55e' }); } } const filteredData = rawData.filter(d => d.value > 0); const totalValue = filteredData.reduce((sum, item) => sum + item.value, 0); return filteredData.map(item => ({ ...item, share: totalValue > 0 ? (item.value / totalValue) : 0 })); };
   const generateIncomeVsExpenseData = () => { if (cashFlowFilter === 'All') { let totalIncome = 0; let totalExpenses = currentBills.reduce((sum, b) => sum + b.amount, 0); owners.filter(o => o !== 'Shared').forEach(owner => { const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); const extra = parseFloat(currentIncomes[`${owner}_extra`] || 0); const rollover = getRollover(monthKey, owner); totalIncome += (inc1 + inc2 + extra + (rollover > 0 ? rollover : 0)); }); return [ { name: 'Total In', amount: totalIncome, fill: '#22c55e' }, { name: 'Total Out', amount: totalExpenses, fill: '#ef4444' }, { name: 'Net', amount: totalIncome - totalExpenses, fill: '#3b82f6' } ]; } else { const owner = cashFlowFilter; const stats = getPersonStats(owner); const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); const extra = parseFloat(currentIncomes[`${owner}_extra`] || 0); const rollover = getRollover(monthKey, owner); const myIncome = inc1 + inc2 + extra + (rollover > 0 ? rollover : 0); const myFixedCosts = stats.due1 + stats.due2; return [ { name: 'My Income', amount: myIncome, fill: '#22c55e' }, { name: 'My Costs', amount: myFixedCosts, fill: '#ef4444' }, { name: 'My Net', amount: myIncome - myFixedCosts, fill: '#3b82f6' } ]; } };
   const generateBurdenData = () => { return owners.filter(o => o !== 'Shared').map(owner => { const stats = getPersonStats(owner); const fixedCosts = stats.due1 + stats.due2; return { name: owner, Fixed: fixedCosts, Free: stats.totalFree }; }); };
   const generateTrendData = () => { const keys = Object.keys(monthlyData).sort(); const recentKeys = keys.slice(-6); return recentKeys.map(key => { const mData = monthlyData[key]; const b = mData.bills || []; const inc = mData.incomes || {}; let mIncome = 0; let mExpenses = b.reduce((sum, item) => sum + item.amount, 0); owners.filter(o => o !== 'Shared').forEach(owner => { const i1 = parseFloat(inc[`${owner}_p1`] || 0); const i2 = parseFloat(inc[`${owner}_p2`] || 0); const ie = parseFloat(inc[`${owner}_extra`] || 0); mIncome += (i1 + i2 + ie); }); const [y, m] = key.split('-'); const dateObj = new Date(y, m - 1); const label = dateObj.toLocaleString('default', { month: 'short' }); return { name: label, Income: mIncome, Expenses: mExpenses }; }); };
@@ -283,7 +283,7 @@ export default function App() {
                 <div><h1 style={{fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 10}}>Budget Snapshot{isMonthClosed && <span className="closed-badge"><Lock size={12}/> Closed</span>}</h1><p className="subtitle">Managing {monthLabel}</p></div>
                 <div style={{display: 'flex', gap: '10px'}}>{!isMonthClosed ? (<button className="btn-close-books" onClick={openClosingModal}><CheckSquare size={16} /> Close Books</button>) : (<button className="btn-reopen-books" onClick={handleReopenBooks}><Unlock size={16} /> Re-open Books</button>)}<div className="view-toggle"><button className={dashboardMode === 'board' ? 'active' : ''} onClick={() => setDashboardMode('board')}><Kanban size={16}/> Board</button><button className={dashboardMode === 'charts' ? 'active' : ''} onClick={() => setDashboardMode('charts')}><PieChartIcon size={16}/> Charts</button></div><button className="btn-sync" onClick={handleSyncBlueprint} title="Pull updates from Master Blueprints"><RefreshCcw size={16} /> Sync</button><button className="btn-balance-all" onClick={handleBalanceEverything}><RefreshCw size={18} /> Balance All</button></div>
               </div>
-              <div className="split-summary-card" style={{width: '100%', boxSizing: 'border-box'}}><div className="split-row"><span className="label"><Users size={16}/> House Total</span><span className="value">${(sharedP1 + sharedP2).toFixed(2)}</span></div><div className="split-divider"></div><div className="split-row highlight"><span className="label">Each Pays</span><span className="value text-accent">${((sharedP1 + sharedP2) / peopleCount).toFixed(0)}</span></div><div className="split-row" style={{ marginTop: 4 }}><span className="label" style={{ fontSize: '0.75rem' }}>Per Check Split</span><span className="value" style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: 600 }}>C1: ${splitP1.toFixed(0)} <span style={{ opacity: 0.5, margin: '0 4px' }}>|</span> C2: ${splitP2.toFixed(0)}</span></div></div>
+              <div className="split-summary-card" style={{width: '100%', boxSizing: 'border-box'}}><div className="split-row"><span className="label"><Users size={16}/> {sharedName} Total</span><span className="value">${(sharedP1 + sharedP2).toFixed(2)}</span></div><div className="split-divider"></div><div className="split-row highlight"><span className="label">Each Pays</span><span className="value text-accent">${((sharedP1 + sharedP2) / peopleCount).toFixed(0)}</span></div><div className="split-row" style={{ marginTop: 4 }}><span className="label" style={{ fontSize: '0.75rem' }}>Per Check Split</span><span className="value" style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: 600 }}>C1: ${splitP1.toFixed(0)} <span style={{ opacity: 0.5, margin: '0 4px' }}>|</span> C2: ${splitP2.toFixed(0)}</span></div></div>
             </header>
             {dashboardMode === 'charts' ? (
               <div className="charts-grid animate-fade-in"><div className="chart-card"><div className="chart-header-row"><h3>Spending Breakdown</h3><div style={{display:'flex', gap:8}}><div className="select-wrapper-small" style={{marginRight: 4}}><Layers size={14} className="icon"/><select value={chartGroupBy} onChange={(e) => setChartGroupBy(e.target.value)}><option value="owner">By Owner</option><option value="category">By Category</option></select></div><div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={breakdownFilter} onChange={(e) => setBreakdownFilter(e.target.value)}><option value="All">All Owners</option>{owners.filter(o => o !== 'Shared').map(o => <option key={o} value={o}>{o}</option>)}</select></div><button className="btn-icon-only" onClick={() => setExpandedChart('breakdown')}><Maximize2 size={16}/></button></div></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('breakdown')}</div></div><div className="chart-card"><div className="chart-header-row"><h3>Money In vs Money Out</h3><div style={{display:'flex', gap:8}}><div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={cashFlowFilter} onChange={(e) => setCashFlowFilter(e.target.value)}><option value="All">Household</option>{owners.filter(o => o !== 'Shared').map(o => <option key={o} value={o}>{o}</option>)}</select></div><button className="btn-icon-only" onClick={() => setExpandedChart('cashflow')}><Maximize2 size={16}/></button></div></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('cashflow')}</div></div><div className="chart-card"><div className="chart-header-row"><h3>Fixed Bills vs Free Cash</h3><button className="btn-icon-only" onClick={() => setExpandedChart('burden')}><Maximize2 size={16}/></button></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('burden')}</div></div><div className="chart-card"><div className="chart-header-row"><h3>6-Month Financial Trend</h3><button className="btn-icon-only" onClick={() => setExpandedChart('trend')}><Maximize2 size={16}/></button></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('trend')}</div></div></div>
@@ -303,8 +303,45 @@ export default function App() {
                   ))}
                 </div>
                 <ChecklistWidget title={`${monthLabel} Overview`} todos={currentTodos.filter(t => !t.columnId || t.columnId === 'global')} onAdd={(text) => handleAddTodo(text, 'Shared', 'global')} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} variant="global" />
+                
                 <DragDropContext onDragEnd={onDragEnd}>
-                  <BalanceSection title="🏠 Shared Bills" owner="Shared" bills={currentBills} isShared={true} onTogglePaid={togglePaid} onDelete={deleteFromDashboard} onAddOneTime={openOneTimeModal} onBalance={handleSectionBalance} onAddTodo={(text, col) => handleAddTodo(text, 'Shared', col)} todos={currentTodos.filter(t => t.owner === 'Shared')} onToggleTodo={handleToggleTodo} onDeleteTodo={handleDeleteTodo} />
+                  {/* NEW INTERACTIVE SHARED BILLS HEADER IN THE BALANCESECTION CALL */}
+                  <BalanceSection 
+                    title={
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <span>🏠</span>
+                        {isEditingSharedName ? (
+                          <input 
+                            autoFocus 
+                            value={tempSharedName} 
+                            onChange={(e) => setTempSharedName(e.target.value)} 
+                            onBlur={() => { setSharedName(tempSharedName || 'Shared'); setIsEditingSharedName(false); }} 
+                            onKeyDown={(e) => { if (e.key === 'Enter') { setSharedName(tempSharedName || 'Shared'); setIsEditingSharedName(false); } }} 
+                            style={{ background: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--accent)', borderRadius: 4, padding: '0px 4px', fontSize: 'inherit', fontWeight: 'inherit', outline: 'none', width: '120px' }} 
+                          />
+                        ) : (
+                          <span 
+                            onClick={() => { setTempSharedName(sharedName); setIsEditingSharedName(true); }} 
+                            style={{ cursor: 'pointer', borderBottom: '1px dashed var(--accent)' }} 
+                            title="Click to rename"
+                          >
+                            {sharedName} Bills
+                          </span>
+                        )}
+                      </div>
+                    } 
+                    owner="Shared" 
+                    bills={currentBills} 
+                    isShared={true} 
+                    onTogglePaid={togglePaid} 
+                    onDelete={deleteFromDashboard} 
+                    onAddOneTime={openOneTimeModal} 
+                    onBalance={handleSectionBalance} 
+                    onAddTodo={(text, col) => handleAddTodo(text, 'Shared', col)} 
+                    todos={currentTodos.filter(t => t.owner === 'Shared')} 
+                    onToggleTodo={handleToggleTodo} 
+                    onDeleteTodo={handleDeleteTodo} 
+                  />
                   {owners.filter(o => o !== 'Shared').map(owner => (<BalanceSection key={owner} title={`👤 ${owner}'s Bills`} owner={owner} bills={currentBills} isShared={false} onTogglePaid={togglePaid} onDelete={deleteFromDashboard} onAddOneTime={openOneTimeModal} onBalance={handleSectionBalance} onAddTodo={(text, col) => handleAddTodo(text, owner, col)} todos={currentTodos.filter(t => t.owner === owner)} onToggleTodo={handleToggleTodo} onDeleteTodo={handleDeleteTodo} />))}
                 </DragDropContext>
               </>
@@ -314,8 +351,7 @@ export default function App() {
         {view === 'bills' && <RecurringBills bills={recurringBills} onAddBill={addRecurring} onEditBill={updateRecurring} onDeleteBill={deleteRecurring} owners={owners} categories={categories} />}
         {view === 'goals' && <SavingsManager goals={savingsGoals} onAddGoal={addGoal} onEditGoal={updateGoal} onDeleteGoal={deleteGoal} owners={owners} />}
         {view === 'forecast' && ( <div className="animate-fade-in"> <div className="month-selector"><button onClick={() => changeMonth(-1)}><ChevronLeft size={24}/></button><h2>{monthLabel}</h2><button onClick={() => changeMonth(1)}><ChevronRight size={24}/></button></div> {(() => { let totalRollover = 0; owners.filter(o => o !== 'Shared').forEach(owner => { totalRollover += getRollover(monthKey, owner); }); return <Forecast bills={currentBills} currentDate={currentDate} monthLabel={monthLabel} incomes={currentIncomes} owners={owners} rollover={totalRollover} />; })()} </div> )}
-        {view === 'settings' && <Settings currentTheme={theme} setTheme={setTheme} owners={owners} onAddOwner={setOwners} onDeleteOwner={(name) => setOwners(owners.filter(o => o !== name))} appStartDate={appStartDate} startingBalances={startingBalances} setStartingBalances={setStartingBalances} categories={categories} setCategories={setCategories} />}
-      </main>
+        {view === 'settings' && <Settings currentTheme={theme} setTheme={setTheme} owners={owners} onAddOwner={setOwners} onDeleteOwner={(name) => setOwners(owners.filter(o => o !== name))} sharedName={sharedName} setSharedName={setSharedName} appStartDate={appStartDate} startingBalances={startingBalances} setStartingBalances={setStartingBalances} categories={categories} setCategories={setCategories} />}      </main>
 
       {/* MODALS */}
       {isModalOpen && (<div className="modal-overlay"><div className="modal-card animate-fade-in"><div className="modal-header"><h3 style={{margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8}}>{modalType === 'onetime' ? <Plus size={20}/> : <Target size={20}/>} {modalType === 'onetime' ? 'Add One-Time Bill' : 'Throw Extra Cash'}</h3><button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button></div><form onSubmit={handleModalSubmit} className="add-bill-form"><p className="subtitle" style={{marginBottom: 20, marginTop: 0}}>{modalType === 'onetime' ? `Adding to ${modalData.owner}'s check.` : `How much extra are you putting towards ${modalData.name.replace('Extra: ', '')}?`}</p>{modalType === 'onetime' && (<input autoFocus className="input-field" placeholder="What is the expense?" value={modalData.name} onChange={(e) => setModalData({ ...modalData, name: e.target.value })} />)}<div className="form-row"><input type="number" autoFocus={modalType !== 'onetime'} className="input-field" placeholder="Amount ($)" value={modalData.amount} onChange={(e) => setModalData({ ...modalData, amount: e.target.value })} /><select className="input-field" value={modalData.columnId} onChange={(e) => setModalData({ ...modalData, columnId: e.target.value })}><option value="pay1">From Paycheck 1</option><option value="pay2">From Paycheck 2</option></select></div>{modalType === 'onetime' && (<div style={{marginTop: 10}}><select className="input-field" value={modalData.category} onChange={e => setModalData({...modalData, category: e.target.value})}>{Object.entries(categories).map(([key, cat]) => (<option key={key} value={key}>{cat.label}</option>))}</select></div>)}<div className="form-actions" style={{justifyContent: 'flex-end', marginTop: 15}}><button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="btn-primary">{modalType === 'onetime' ? 'Add Expense' : 'Add Payment'}</button></div></form></div></div>)}

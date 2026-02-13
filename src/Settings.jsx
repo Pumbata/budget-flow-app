@@ -1,16 +1,26 @@
 import React, { useState } from 'react';
-import { Moon, Sun, UserPlus, Trash2, Save, Tags, Plus, X, Coffee } from 'lucide-react';
+import { Moon, Sun, UserPlus, Trash2, Save, Tags, Plus, X, Coffee, Home } from 'lucide-react';
 
-export default function Settings({ currentTheme, setTheme, owners, onAddOwner, onDeleteOwner, appStartDate, startingBalances, setStartingBalances, categories, setCategories }) {
+export default function Settings({ 
+  currentTheme, setTheme, 
+  owners, onAddOwner, onDeleteOwner, 
+  sharedName, setSharedName, 
+  appStartDate, 
+  startingBalances, setStartingBalances, 
+  categories, setCategories 
+}) {
   const [newOwnerName, setNewOwnerName] = useState('');
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState('#6366f1');
 
   const handleAddOwner = (e) => {
     e.preventDefault();
-    if (newOwnerName && !owners.includes(newOwnerName)) {
-      onAddOwner([...owners, newOwnerName]);
+    const trimmed = newOwnerName.trim();
+    if (trimmed && !owners.includes(trimmed) && trimmed.toLowerCase() !== 'shared') {
+      onAddOwner([...owners, trimmed]);
       setNewOwnerName('');
+    } else if (trimmed.toLowerCase() === 'shared') {
+      alert('The name "Shared" is reserved for the Base Account.');
     }
   };
 
@@ -101,16 +111,29 @@ export default function Settings({ currentTheme, setTheme, owners, onAddOwner, o
           </form>
         </div>
 
-        {/* HOUSEHOLD MEMBERS */}
+        {/* ACCOUNT STRUCTURE & MEMBERS */}
         <div className="card settings-card">
-          <h3>Household Members</h3>
+          <h3><Home size={18} style={{verticalAlign: 'text-bottom', marginRight: 8}}/> Account Structure</h3>
+          
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <label>Base Account Name</label>
+            <input 
+              type="text" 
+              className="input-field" 
+              value={sharedName}
+              onChange={(e) => setSharedName(e.target.value)}
+              onBlur={() => { if (!sharedName.trim()) setSharedName('Shared'); }}
+              placeholder="e.g. Shared, My Bills, Main Account"
+            />
+            <p className="hint">This renames the default 'Shared Bills' column on the board.</p>
+          </div>
+
+          <h4 style={{marginBottom: 10, fontSize: '0.9rem', color: 'var(--text-dim)'}}>Individual Users</h4>
           <div className="owners-list">
-            {owners.map(owner => (
+            {owners.filter(o => o !== 'Shared').map(owner => (
               <div key={owner} className="owner-item">
                 <span>{owner}</span>
-                {owner !== 'Shared' && (
-                  <button onClick={() => onDeleteOwner(owner)} className="btn-icon-only"><Trash2 size={16} /></button>
-                )}
+                <button onClick={() => onDeleteOwner(owner)} className="btn-icon-only"><Trash2 size={16} /></button>
               </div>
             ))}
           </div>
