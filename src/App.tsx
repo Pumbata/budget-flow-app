@@ -11,6 +11,7 @@ import Forecast from './Forecast';
 import { autoBalanceBudget } from './balanceEngine';
 import './index.css';
 import Landing from './Landing';
+import Onboarding from './Onboarding';
 
 
 // --- CONSTANTS & HELPERS ---
@@ -35,6 +36,7 @@ export default function App() {
   const [breakdownFilter, setBreakdownFilter] = useState('All');
   const [chartGroupBy, setChartGroupBy] = useState('owner'); 
   const [cashFlowFilter, setCashFlowFilter] = useState('All');
+  const [showOnboarding, setShowOnboarding] = useState(false);
   
   // --- Data State ---
   const [theme, setTheme] = useState('dark');
@@ -102,6 +104,7 @@ export default function App() {
         if (data.theme) setTheme(data.theme);
       } else {
         setAppStartDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`);
+        setShowOnboarding(true);
       }
     } catch (err) {
       console.error(err);
@@ -249,6 +252,14 @@ export default function App() {
   const openOneTimeModal = (owner, columnId) => { setModalType('onetime'); setModalData({ owner, columnId, name: '', amount: '', goalId: null, category: 'other' }); setIsModalOpen(true); };
   const openExtraSavingsModal = (goal) => { setModalType('extraSavings'); setModalData({ owner: goal.owner, columnId: 'pay1', name: `Extra: ${goal.name}`, amount: '', goalId: goal.id, category: 'savings' }); setIsModalOpen(true); };
   const changeMonth = (offset) => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + offset); setCurrentDate(newDate); };
+  const handleOnboardingComplete = ({ finalSharedName, finalOwners, finalBills }) => {
+    setSharedName(finalSharedName);
+    setOwners(finalOwners);
+    setRecurringBills(finalBills);
+    setShowOnboarding(false);
+  };
+
+
 
   // ==========================================
   // 4. RENDER GATE (MUST BE LAST)
@@ -261,6 +272,11 @@ export default function App() {
   }
 
   if (isLoadingData) return <div style={{height: '100vh', display:'flex', justifyContent:'center', alignItems:'center', background: 'var(--bg)', color:'var(--text)'}}><Loader2 className="spin" size={40}/></div>;
+  // Intercept brand new users
+  if (showOnboarding) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
+
   
   return (
     <div className="app-container">
