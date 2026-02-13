@@ -1,5 +1,7 @@
 import React from 'react';
 import { Wallet, LayoutDashboard, SplitSquareHorizontal, CheckSquare, ArrowRight, ShieldCheck } from 'lucide-react';
+import DemoBoard from './DemoBoard';
+
 
 export default function Landing({ onSignIn, onSignUp }) {
   return (
@@ -34,7 +36,11 @@ export default function Landing({ onSignIn, onSignUp }) {
         {/* Mockup / Hero Graphic Area */}
         <div style={{ marginTop: 60, padding: 20, background: 'var(--border)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
            <div style={{ background: 'var(--bg)', height: '300px', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}>
-              [ Interactive App Dashboard Graphic Goes Here ]
+              {/* Mockup / Hero Graphic Area */}
+        <div style={{ marginTop: 60, padding: 10, background: 'var(--border)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+           {/* Replace the static text with the new Demo component */}
+           <DemoBoard />
+        </div>
            </div>
         </div>
       </header>

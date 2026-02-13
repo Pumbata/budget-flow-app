@@ -12,6 +12,7 @@ import { autoBalanceBudget } from './balanceEngine';
 import './index.css';
 import Landing from './Landing';
 
+
 // --- CONSTANTS & HELPERS ---
 export const DEFAULT_CATEGORIES = { housing: { label: 'Housing', color: '#ef4444' }, transport: { label: 'Transport', color: '#f97316' }, utilities: { label: 'Utilities', color: '#eab308' }, debt: { label: 'Debt', color: '#8b5cf6' }, lifestyle: { label: 'Lifestyle', color: '#ec4899' }, shopping: { label: 'Shopping', color: '#06b6d4' }, health: { label: 'Health', color: '#10b981' }, savings: { label: 'Savings', color: '#22c55e' }, other: { label: 'Other', color: '#64748b' } };
 export function getCategoryIcon(catId) { const size = 14; switch(catId) { case 'housing': return <Home size={size}/>; case 'transport': return <Car size={size}/>; case 'utilities': return <Zap size={size}/>; case 'debt': return <CreditCard size={size}/>; case 'lifestyle': return <Smile size={size}/>; case 'shopping': return <ShoppingBag size={size}/>; case 'health': return <Activity size={size}/>; case 'savings': return <Landmark size={size}/>; case 'other': return <HelpCircle size={size}/>; default: return <Tag size={size}/>; } }
