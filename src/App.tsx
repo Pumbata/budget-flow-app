@@ -51,6 +51,8 @@ export default function App() {
   const [recurringBills, setRecurringBills] = useState([]);
   const [savingsGoals, setSavingsGoals] = useState([]);
   const [monthlyData, setMonthlyData] = useState({});
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
 
   // --- Modal & Form State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -76,14 +78,19 @@ export default function App() {
       else setIsLoadingData(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // NEW: Catch the password recovery event
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveringPassword(true);
+      }
+      
       setSession(session);
-      if (session) loadUserData(session.user.id);
+      if (session && !isRecoveringPassword) loadUserData(session.user.id);
       else setIsLoadingData(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isRecoveringPassword]); // Add dependency
 
   const loadUserData = async (userId) => {
     setIsLoadingData(true);
@@ -258,7 +265,18 @@ export default function App() {
     setRecurringBills(finalBills);
     setShowOnboarding(false);
   };
-
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("Password updated successfully!");
+      setIsRecoveringPassword(false); // Drops them back into the normal app flow
+      loadUserData(session.user.id);
+    }
+  };
 
 
   // ==========================================
@@ -272,12 +290,39 @@ export default function App() {
   }
 
   if (isLoadingData) return <div style={{height: '100vh', display:'flex', justifyContent:'center', alignItems:'center', background: 'var(--bg)', color:'var(--text)'}}><Loader2 className="spin" size={40}/></div>;
+  
+  // Intercept users returning from a password reset email
+  if (isRecoveringPassword) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
+        <div className="card" style={{ padding: 40, width: '100%', maxWidth: 400, textAlign: 'center' }}>
+          <Lock size={40} color="var(--accent)" style={{ marginBottom: 20 }} />
+          <h2 style={{ marginTop: 0 }}>Reset Your Password</h2>
+          <p style={{ color: 'var(--text-dim)', marginBottom: 20 }}>Enter a new, strong password below.</p>
+          <form onSubmit={handleUpdatePassword} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+            <input 
+              type="password" 
+              className="input-field" 
+              placeholder="New Password" 
+              value={newPassword} 
+              onChange={(e) => setNewPassword(e.target.value)} 
+              required 
+              autoFocus
+            />
+            <button type="submit" className="btn-primary" style={{ justifyContent: 'center', padding: 12 }}>Update Password</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+  
+  
   // Intercept brand new users
   if (showOnboarding) {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  
+
   return (
     <div className="app-container">
       <nav className="sidebar">
