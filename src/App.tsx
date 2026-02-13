@@ -13,7 +13,6 @@ import './index.css';
 import Landing from './Landing';
 import Onboarding from './Onboarding';
 
-
 // --- CONSTANTS & HELPERS ---
 export const DEFAULT_CATEGORIES = { housing: { label: 'Housing', color: '#ef4444' }, transport: { label: 'Transport', color: '#f97316' }, utilities: { label: 'Utilities', color: '#eab308' }, debt: { label: 'Debt', color: '#8b5cf6' }, lifestyle: { label: 'Lifestyle', color: '#ec4899' }, shopping: { label: 'Shopping', color: '#06b6d4' }, health: { label: 'Health', color: '#10b981' }, savings: { label: 'Savings', color: '#22c55e' }, other: { label: 'Other', color: '#64748b' } };
 export function getCategoryIcon(catId) { const size = 14; switch(catId) { case 'housing': return <Home size={size}/>; case 'transport': return <Car size={size}/>; case 'utilities': return <Zap size={size}/>; case 'debt': return <CreditCard size={size}/>; case 'lifestyle': return <Smile size={size}/>; case 'shopping': return <ShoppingBag size={size}/>; case 'health': return <Activity size={size}/>; case 'savings': return <Landmark size={size}/>; case 'other': return <HelpCircle size={size}/>; default: return <Tag size={size}/>; } }
@@ -38,12 +37,13 @@ export default function App() {
   const [cashFlowFilter, setCashFlowFilter] = useState('All');
   const [showOnboarding, setShowOnboarding] = useState(false);
   
-  // --- Data State ---
+  // --- Data State (NEW TOPOLOGY) ---
   const [theme, setTheme] = useState('dark');
-  const [owners, setOwners] = useState(['Shared', 'User 1']);
-  const [sharedName, setSharedName] = useState('Shared'); // NEW
-  const [isEditingSharedName, setIsEditingSharedName] = useState(false); // NEW
-  const [tempSharedName, setTempSharedName] = useState(''); // NEW
+  const [owners, setOwners] = useState(['User 1']); // ONLY humans go here now
+  const [hasJointPool, setHasJointPool] = useState(false);
+  const [jointPoolName, setJointPoolName] = useState('House Bills'); 
+  const [isEditingJointPoolName, setIsEditingJointPoolName] = useState(false); 
+  const [tempJointPoolName, setTempJointPoolName] = useState(''); 
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [currentDate, setCurrentDate] = useState(new Date()); 
   const [appStartDate, setAppStartDate] = useState('');
@@ -60,7 +60,6 @@ export default function App() {
   const [modalData, setModalData] = useState({ owner: '', columnId: '', name: '', amount: '', goalId: null, category: 'other' });
   const [isClosingOpen, setIsClosingOpen] = useState(false);
   const [closingBalances, setClosingBalances] = useState({});
-  const [newTodoText, setNewTodoText] = useState('');
   
   // --- Derived Constants ---
   const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
@@ -70,7 +69,6 @@ export default function App() {
   // 2. EFFECTS (DATA LOADING & SAVING)
   // ==========================================
 
-  // A. Load User Data (Auth Listener)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -79,29 +77,34 @@ export default function App() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // NEW: Catch the password recovery event
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsRecoveringPassword(true);
-      }
-      
+      if (event === 'PASSWORD_RECOVERY') setIsRecoveringPassword(true);
       setSession(session);
       if (session && !isRecoveringPassword) loadUserData(session.user.id);
       else setIsLoadingData(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [isRecoveringPassword]); // Add dependency
+  }, [isRecoveringPassword]);
 
   const loadUserData = async (userId) => {
     setIsLoadingData(true);
     try {
       const { data, error } = await supabase.from('user_state').select('*').eq('id', userId).maybeSingle();
-      
       if (error) console.error('Error loading data:', error);
 
       if (data) {
-        if (data.owners) setOwners(data.owners);
-        if (data.shared_name) setSharedName(data.shared_name); // LOAD CUSTOM NAME
+        if (data.owners) {
+          // Legacy cleanup: Strip 'Shared' from the array if migrating an old save
+          setOwners(data.owners.filter(o => o !== 'Shared')); 
+        }
+        if (data.has_joint_pool !== undefined) setHasJointPool(data.has_joint_pool);
+        if (data.joint_pool_name) setJointPoolName(data.joint_pool_name);
+        // Fallback for older saves that used shared_name
+        else if (data.shared_name && data.has_joint_pool === undefined) {
+           setJointPoolName(data.shared_name);
+           setHasJointPool(true);
+        }
+        
         if (data.categories) setCategories(data.categories);
         if (data.recurring_bills) setRecurringBills(data.recurring_bills);
         if (data.savings_goals) setSavingsGoals(data.savings_goals);
@@ -120,15 +123,14 @@ export default function App() {
     }
   };
 
-  // B. Save User Data (Triggered on change)
   useEffect(() => {
     if (!session || isLoadingData) return;
-
     const saveData = async () => {
       const updates = {
         id: session.user.id,
         owners,
-        shared_name: sharedName, // SAVE CUSTOM NAME
+        has_joint_pool: hasJointPool,
+        joint_pool_name: jointPoolName,
         categories,
         recurring_bills: recurringBills,
         savings_goals: savingsGoals,
@@ -138,52 +140,24 @@ export default function App() {
         theme,
         updated_at: new Date()
       };
-
       const { error } = await supabase.from('user_state').upsert(updates);
       if (error) console.error('Error saving data:', error);
     };
-
     saveData();
-  }, [owners, sharedName, categories, recurringBills, savingsGoals, monthlyData, startingBalances, appStartDate, theme, session]);
+  }, [owners, hasJointPool, jointPoolName, categories, recurringBills, savingsGoals, monthlyData, startingBalances, appStartDate, theme, session]);
 
-  // C. Apply Theme
   useEffect(() => { document.body.setAttribute('data-theme', theme); }, [theme]);
 
-  // D. Initialize New Month 
   useEffect(() => {
     if (!monthlyData[monthKey]) {
       const clonedBills = recurringBills.map(b => ({ 
-        ...b, 
-        snapshotId: `${monthKey}-${b.id}-${Math.random().toString(36).substring(7)}`, 
-        isPaid: false, 
-        originalOwner: b.owner, 
-        category: b.category || 'other' 
+        ...b, snapshotId: `${monthKey}-${b.id}-${Math.random().toString(36).substring(7)}`, isPaid: false, originalOwner: b.owner, category: b.category || 'other' 
       }));
-      
       const activeGoals = savingsGoals.filter(g => g.totalPaid < g.target);
       const clonedGoals = activeGoals.map(g => ({
-        id: `goal-${g.id}`, 
-        snapshotId: `${monthKey}-goal-${g.id}-${Math.random().toString(36).substring(7)}`, 
-        name: `🎯 ${g.name}`, 
-        amount: g.monthlyMin, 
-        dueDate: 28, 
-        columnId: 'pay2', 
-        owner: g.owner, 
-        isPaid: false, 
-        isSavings: true, 
-        goalId: g.id, 
-        originalOwner: g.owner, 
-        category: 'savings' 
+        id: `goal-${g.id}`, snapshotId: `${monthKey}-goal-${g.id}-${Math.random().toString(36).substring(7)}`, name: `🎯 ${g.name}`, amount: g.monthlyMin, dueDate: 28, columnId: 'pay2', owner: g.owner, isPaid: false, isSavings: true, goalId: g.id, originalOwner: g.owner, category: 'savings' 
       }));
-
-      setMonthlyData(prev => ({ 
-        ...prev, 
-        [monthKey]: { 
-          bills: [...clonedBills, ...clonedGoals], 
-          incomes: {}, 
-          todos: [] 
-        } 
-      }));
+      setMonthlyData(prev => ({ ...prev, [monthKey]: { bills: [...clonedBills, ...clonedGoals], incomes: {}, todos: [] } }));
     }
   }, [monthKey, recurringBills, savingsGoals, monthlyData]);
 
@@ -203,7 +177,7 @@ export default function App() {
     });
   };
 
-  const peopleCount = Math.max(1, owners.filter(o => o !== 'Shared').length);
+  const peopleCount = Math.max(1, owners.length);
   const getRollover = (targetMonthKey, person) => {
     if (targetMonthKey <= appStartDate) return parseFloat(startingBalances[person] || 0);
     let totalRollover = 0; let currentKey = targetMonthKey;
@@ -215,8 +189,12 @@ export default function App() {
        const mData = monthlyData[prevKey] || { bills: [], incomes: {} };
        if (mData.closingBalances && mData.closingBalances[person] !== undefined) { totalRollover += mData.closingBalances[person]; break; }
        const b = mData.bills || []; const inc = mData.incomes || {};
-       const oldSharedP1 = b.filter(x => x.owner === 'Shared' && x.columnId === 'pay1').reduce((s, x) => s + x.amount, 0); const oldSharedP2 = b.filter(x => x.owner === 'Shared' && x.columnId === 'pay2').reduce((s, x) => s + x.amount, 0);
-       const oldSplit1 = oldSharedP1 / peopleCount; const oldSplit2 = oldSharedP2 / peopleCount;
+       
+       const oldSharedP1 = hasJointPool ? b.filter(x => x.owner === jointPoolName && x.columnId === 'pay1').reduce((s, x) => s + x.amount, 0) : 0;
+       const oldSharedP2 = hasJointPool ? b.filter(x => x.owner === jointPoolName && x.columnId === 'pay2').reduce((s, x) => s + x.amount, 0) : 0;
+       const oldSplit1 = hasJointPool ? oldSharedP1 / peopleCount : 0; 
+       const oldSplit2 = hasJointPool ? oldSharedP2 / peopleCount : 0;
+       
        const oldInc1 = parseFloat(inc[`${person}_p1`] || 0); const oldInc2 = parseFloat(inc[`${person}_p2`] || 0); const oldIncExtra = parseFloat(inc[`${person}_extra`] || 0);
        const oldPersP1 = b.filter(x => x.owner === person && x.columnId === 'pay1').reduce((s, x) => s + x.amount, 0); const oldPersP2 = b.filter(x => x.owner === person && x.columnId === 'pay2').reduce((s, x) => s + x.amount, 0);
        const generatedThatMonth = (oldInc1 - (oldPersP1 + oldSplit1)) + (oldInc2 - (oldPersP2 + oldSplit2)) + oldIncExtra;
@@ -224,28 +202,108 @@ export default function App() {
     }
     return totalRollover;
   };
-  const sharedP1 = currentBills.filter(b => b.owner === 'Shared' && b.columnId === 'pay1').reduce((sum, b) => sum + b.amount, 0); const sharedP2 = currentBills.filter(b => b.owner === 'Shared' && b.columnId === 'pay2').reduce((sum, b) => sum + b.amount, 0); const splitP1 = sharedP1 / peopleCount; const splitP2 = sharedP2 / peopleCount;
-  const getPersonStats = (person) => { const inc1 = parseFloat(currentIncomes[`${person}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${person}_p2`] || 0); const incExtra = parseFloat(currentIncomes[`${person}_extra`] || 0); const pBills = currentBills.filter(b => b.owner === person); const myPersP1 = pBills.filter(b => b.columnId === 'pay1').reduce((sum, b) => sum + b.amount, 0); const myPersP2 = pBills.filter(b => b.columnId === 'pay2').reduce((sum, b) => sum + b.amount, 0); const due1 = myPersP1 + splitP1; const due2 = myPersP2 + splitP2; const free1 = inc1 - due1; const free2 = inc2 - due2; const rollover = getRollover(monthKey, person); const totalFree = free1 + free2 + incExtra + rollover; return { free1, free2, incExtra, rollover, totalFree, due1, due2 }; };
 
-  const generatePieData = () => { const ownerColors = ['#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#f43f5e', '#f59e0b']; let rawData = []; let scopeBills = currentBills; if (breakdownFilter !== 'All') { scopeBills = currentBills.filter(b => b.owner === breakdownFilter); } if (chartGroupBy === 'owner') { if (breakdownFilter === 'All') { let totalFreeCash = 0; const personalBillsData = []; owners.filter(o => o !== 'Shared').forEach((owner, idx) => { const stats = getPersonStats(owner); totalFreeCash += stats.totalFree; const persOnlyTotal = currentBills.filter(b => b.owner === owner).reduce((sum, b) => sum + b.amount, 0); if (persOnlyTotal > 0) personalBillsData.push({ name: `${owner}'s Bills`, value: persOnlyTotal, color: ownerColors[idx % ownerColors.length] }); }); rawData = [{ name: `${sharedName} Bills`, value: sharedP1 + sharedP2, color: '#f59e0b' }, ...personalBillsData]; if (totalFreeCash > 0) rawData.push({ name: 'Total Free Cash', value: totalFreeCash, color: '#22c55e' }); } else { const stats = getPersonStats(breakdownFilter); rawData = scopeBills.map((b, idx) => ({ name: b.name, value: b.amount, color: ownerColors[idx % ownerColors.length] })); const mySharedShare = (sharedP1 + sharedP2) / peopleCount; if (mySharedShare > 0) rawData.push({ name: `${sharedName} Portion`, value: mySharedShare, color: '#f59e0b' }); if (stats.totalFree > 0) rawData.push({ name: 'My Free Cash', value: stats.totalFree, color: '#22c55e' }); } } else { const categoryTotals = {}; Object.keys(categories).forEach(k => categoryTotals[k] = 0); scopeBills.forEach(b => { const cat = b.category && categories[b.category] ? b.category : 'other'; categoryTotals[cat] = (categoryTotals[cat] || 0) + b.amount; }); rawData = Object.keys(categoryTotals).filter(k => categoryTotals[k] > 0).map(k => ({ name: categories[k].label, value: categoryTotals[k], color: categories[k].color })); if (breakdownFilter === 'All') { let totalFree = 0; owners.filter(o => o !== 'Shared').forEach(o => totalFree += getPersonStats(o).totalFree); if (totalFree > 0) rawData.push({ name: 'Free Cash', value: totalFree, color: '#22c55e' }); } else { const stats = getPersonStats(breakdownFilter); if (stats.totalFree > 0) rawData.push({ name: 'Free Cash', value: stats.totalFree, color: '#22c55e' }); } } const filteredData = rawData.filter(d => d.value > 0); const totalValue = filteredData.reduce((sum, item) => sum + item.value, 0); return filteredData.map(item => ({ ...item, share: totalValue > 0 ? (item.value / totalValue) : 0 })); };
-  const generateIncomeVsExpenseData = () => { if (cashFlowFilter === 'All') { let totalIncome = 0; let totalExpenses = currentBills.reduce((sum, b) => sum + b.amount, 0); owners.filter(o => o !== 'Shared').forEach(owner => { const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); const extra = parseFloat(currentIncomes[`${owner}_extra`] || 0); const rollover = getRollover(monthKey, owner); totalIncome += (inc1 + inc2 + extra + (rollover > 0 ? rollover : 0)); }); return [ { name: 'Total In', amount: totalIncome, fill: '#22c55e' }, { name: 'Total Out', amount: totalExpenses, fill: '#ef4444' }, { name: 'Net', amount: totalIncome - totalExpenses, fill: '#3b82f6' } ]; } else { const owner = cashFlowFilter; const stats = getPersonStats(owner); const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); const extra = parseFloat(currentIncomes[`${owner}_extra`] || 0); const rollover = getRollover(monthKey, owner); const myIncome = inc1 + inc2 + extra + (rollover > 0 ? rollover : 0); const myFixedCosts = stats.due1 + stats.due2; return [ { name: 'My Income', amount: myIncome, fill: '#22c55e' }, { name: 'My Costs', amount: myFixedCosts, fill: '#ef4444' }, { name: 'My Net', amount: myIncome - myFixedCosts, fill: '#3b82f6' } ]; } };
-  const generateBurdenData = () => { return owners.filter(o => o !== 'Shared').map(owner => { const stats = getPersonStats(owner); const fixedCosts = stats.due1 + stats.due2; return { name: owner, Fixed: fixedCosts, Free: stats.totalFree }; }); };
-  const generateTrendData = () => { const keys = Object.keys(monthlyData).sort(); const recentKeys = keys.slice(-6); return recentKeys.map(key => { const mData = monthlyData[key]; const b = mData.bills || []; const inc = mData.incomes || {}; let mIncome = 0; let mExpenses = b.reduce((sum, item) => sum + item.amount, 0); owners.filter(o => o !== 'Shared').forEach(owner => { const i1 = parseFloat(inc[`${owner}_p1`] || 0); const i2 = parseFloat(inc[`${owner}_p2`] || 0); const ie = parseFloat(inc[`${owner}_extra`] || 0); mIncome += (i1 + i2 + ie); }); const [y, m] = key.split('-'); const dateObj = new Date(y, m - 1); const label = dateObj.toLocaleString('default', { month: 'short' }); return { name: label, Income: mIncome, Expenses: mExpenses }; }); };
+  // Dynamic Joint Math
+  const sharedP1 = hasJointPool ? currentBills.filter(b => b.owner === jointPoolName && b.columnId === 'pay1').reduce((sum, b) => sum + b.amount, 0) : 0; 
+  const sharedP2 = hasJointPool ? currentBills.filter(b => b.owner === jointPoolName && b.columnId === 'pay2').reduce((sum, b) => sum + b.amount, 0) : 0; 
+  const splitP1 = hasJointPool ? sharedP1 / peopleCount : 0; 
+  const splitP2 = hasJointPool ? sharedP2 / peopleCount : 0;
+
+  const getPersonStats = (person) => { 
+    const inc1 = parseFloat(currentIncomes[`${person}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${person}_p2`] || 0); const incExtra = parseFloat(currentIncomes[`${person}_extra`] || 0); 
+    const pBills = currentBills.filter(b => b.owner === person); 
+    const myPersP1 = pBills.filter(b => b.columnId === 'pay1').reduce((sum, b) => sum + b.amount, 0); const myPersP2 = pBills.filter(b => b.columnId === 'pay2').reduce((sum, b) => sum + b.amount, 0); 
+    const due1 = myPersP1 + splitP1; const due2 = myPersP2 + splitP2; 
+    const free1 = inc1 - due1; const free2 = inc2 - due2; const rollover = getRollover(monthKey, person); 
+    const totalFree = free1 + free2 + incExtra + rollover; 
+    return { free1, free2, incExtra, rollover, totalFree, due1, due2 }; 
+  };
+
+  const generatePieData = () => { 
+    const ownerColors = ['#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#f43f5e', '#f59e0b']; let rawData = []; let scopeBills = currentBills; 
+    if (breakdownFilter !== 'All') scopeBills = currentBills.filter(b => b.owner === breakdownFilter); 
+    if (chartGroupBy === 'owner') { 
+      if (breakdownFilter === 'All') { 
+        let totalFreeCash = 0; const personalBillsData = []; 
+        owners.forEach((owner, idx) => { 
+          const stats = getPersonStats(owner); totalFreeCash += stats.totalFree; 
+          const persOnlyTotal = currentBills.filter(b => b.owner === owner).reduce((sum, b) => sum + b.amount, 0); 
+          if (persOnlyTotal > 0) personalBillsData.push({ name: `${owner}'s Bills`, value: persOnlyTotal, color: ownerColors[idx % ownerColors.length] }); 
+        }); 
+        rawData = hasJointPool ? [{ name: `${jointPoolName} Bills`, value: sharedP1 + sharedP2, color: '#f59e0b' }, ...personalBillsData] : [...personalBillsData]; 
+        if (totalFreeCash > 0) rawData.push({ name: 'Total Free Cash', value: totalFreeCash, color: '#22c55e' }); 
+      } else { 
+        const stats = getPersonStats(breakdownFilter); 
+        rawData = scopeBills.map((b, idx) => ({ name: b.name, value: b.amount, color: ownerColors[idx % ownerColors.length] })); 
+        const mySharedShare = hasJointPool ? (sharedP1 + sharedP2) / peopleCount : 0; 
+        if (mySharedShare > 0) rawData.push({ name: `${jointPoolName} Portion`, value: mySharedShare, color: '#f59e0b' }); 
+        if (stats.totalFree > 0) rawData.push({ name: 'My Free Cash', value: stats.totalFree, color: '#22c55e' }); 
+      } 
+    } else { 
+      const categoryTotals = {}; Object.keys(categories).forEach(k => categoryTotals[k] = 0); 
+      scopeBills.forEach(b => { const cat = b.category && categories[b.category] ? b.category : 'other'; categoryTotals[cat] = (categoryTotals[cat] || 0) + b.amount; }); 
+      rawData = Object.keys(categoryTotals).filter(k => categoryTotals[k] > 0).map(k => ({ name: categories[k].label, value: categoryTotals[k], color: categories[k].color })); 
+      let totalFree = 0;
+      if (breakdownFilter === 'All') { owners.forEach(o => totalFree += getPersonStats(o).totalFree); } 
+      else { totalFree = getPersonStats(breakdownFilter).totalFree; }
+      if (totalFree > 0) rawData.push({ name: 'Free Cash', value: totalFree, color: '#22c55e' }); 
+    } 
+    const filteredData = rawData.filter(d => d.value > 0); const totalValue = filteredData.reduce((sum, item) => sum + item.value, 0); 
+    return filteredData.map(item => ({ ...item, share: totalValue > 0 ? (item.value / totalValue) : 0 })); 
+  };
+  
+  const generateIncomeVsExpenseData = () => { 
+    if (cashFlowFilter === 'All') { 
+      let totalIncome = 0; let totalExpenses = currentBills.reduce((sum, b) => sum + b.amount, 0); 
+      owners.forEach(owner => { 
+        const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); const extra = parseFloat(currentIncomes[`${owner}_extra`] || 0); const rollover = getRollover(monthKey, owner); 
+        totalIncome += (inc1 + inc2 + extra + (rollover > 0 ? rollover : 0)); 
+      }); 
+      return [ { name: 'Total In', amount: totalIncome, fill: '#22c55e' }, { name: 'Total Out', amount: totalExpenses, fill: '#ef4444' }, { name: 'Net', amount: totalIncome - totalExpenses, fill: '#3b82f6' } ]; 
+    } else { 
+      const owner = cashFlowFilter; const stats = getPersonStats(owner); 
+      const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); const extra = parseFloat(currentIncomes[`${owner}_extra`] || 0); const rollover = getRollover(monthKey, owner); 
+      const myIncome = inc1 + inc2 + extra + (rollover > 0 ? rollover : 0); const myFixedCosts = stats.due1 + stats.due2; 
+      return [ { name: 'My Income', amount: myIncome, fill: '#22c55e' }, { name: 'My Costs', amount: myFixedCosts, fill: '#ef4444' }, { name: 'My Net', amount: myIncome - myFixedCosts, fill: '#3b82f6' } ]; 
+    } 
+  };
+
+  const generateBurdenData = () => owners.map(owner => { const stats = getPersonStats(owner); return { name: owner, Fixed: stats.due1 + stats.due2, Free: stats.totalFree }; });
+  const generateTrendData = () => { const keys = Object.keys(monthlyData).sort(); const recentKeys = keys.slice(-6); return recentKeys.map(key => { const mData = monthlyData[key]; const b = mData.bills || []; const inc = mData.incomes || {}; let mIncome = 0; let mExpenses = b.reduce((sum, item) => sum + item.amount, 0); owners.forEach(owner => { mIncome += (parseFloat(inc[`${owner}_p1`] || 0) + parseFloat(inc[`${owner}_p2`] || 0) + parseFloat(inc[`${owner}_extra`] || 0)); }); const [y, m] = key.split('-'); return { name: new Date(y, m - 1).toLocaleString('default', { month: 'short' }), Income: mIncome, Expenses: mExpenses }; }); };
   const CustomTooltip = ({ active, payload }) => { if (active && payload && payload.length) { const item = payload[0]; const originalData = item.payload; return ( <div className="chart-tooltip"> <p className="label">{item.name || item.dataKey}</p> <p className="value">${item.value.toFixed(0)}</p> {originalData.share !== undefined && ( <p style={{fontSize: '0.85rem', color: 'var(--accent)', marginTop: 4, fontWeight: 600}}> {(originalData.share * 100).toFixed(1)}% </p> )} </div> ); } return null; };
   const renderChartContent = (type) => { if (type === 'breakdown') { return ( <ResponsiveContainer width="100%" height="100%"> <PieChart> <Pie data={generatePieData()} cx="50%" cy="50%" innerRadius="45%" outerRadius="70%" paddingAngle={5} dataKey="value"> {generatePieData().map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)} </Pie> <Tooltip content={<CustomTooltip />} isAnimationActive={false} /> <Legend verticalAlign="bottom" height={36}/> </PieChart> </ResponsiveContainer> ); } if (type === 'cashflow') { return ( <ResponsiveContainer width="100%" height="100%"> <BarChart data={generateIncomeVsExpenseData()} margin={{top: 20, right: 30, left: 0, bottom: 5}}> <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/> <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false}/> <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`}/> <Tooltip content={<CustomTooltip />} cursor={{fill: 'var(--bg)'}} isAnimationActive={false}/> <Bar dataKey="amount" radius={[4, 4, 0, 0]}> {generateIncomeVsExpenseData().map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)} </Bar> </BarChart> </ResponsiveContainer> ); } if (type === 'burden') { return ( <ResponsiveContainer width="100%" height="100%"> <BarChart data={generateBurdenData()} margin={{top: 20, right: 30, left: 0, bottom: 5}}> <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/> <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false}/> <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`}/> <Tooltip content={<CustomTooltip />} cursor={{fill: 'var(--bg)'}} isAnimationActive={false}/> <Legend verticalAlign="top" height={36}/> <Bar dataKey="Fixed" stackId="a" fill="#ef4444" radius={[0, 0, 4, 4]} name="Fixed Bills"/> <Bar dataKey="Free" stackId="a" fill="#22c55e" radius={[4, 4, 0, 0]} name="Free Cash"/> </BarChart> </ResponsiveContainer> ); } if (type === 'trend') { return ( <ResponsiveContainer width="100%" height="100%"> <ComposedChart data={generateTrendData()} margin={{top: 20, right: 30, left: 0, bottom: 5}}> <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/> <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false}/> <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`}/> <Tooltip content={<CustomTooltip />} isAnimationActive={false} /> <Legend verticalAlign="top" height={36}/> <Area type="monotone" dataKey="Income" fill="rgba(34, 197, 94, 0.1)" stroke="#22c55e" strokeWidth={2} name="Total Income"/> <Line type="monotone" dataKey="Expenses" stroke="#ef4444" strokeWidth={2} dot={{r: 4}} name="Total Expenses"/> </ComposedChart> </ResponsiveContainer> ); } };
 
   // --- Actions ---
   const handleSignOut = async () => { await supabase.auth.signOut(); setSession(null); }; 
-  const openClosingModal = () => { const initial = {}; owners.filter(o => o !== 'Shared').forEach(o => { initial[o] = getPersonStats(o).totalFree; }); setClosingBalances(initial); setIsClosingOpen(true); };
+  const openClosingModal = () => { const initial = {}; owners.forEach(o => { initial[o] = getPersonStats(o).totalFree; }); setClosingBalances(initial); setIsClosingOpen(true); };
   const handleCloseBooks = (e) => { e.preventDefault(); setMonthlyData(prev => ({ ...prev, [monthKey]: { ...prev[monthKey], closingBalances: closingBalances } })); setIsClosingOpen(false); };
   const handleReopenBooks = () => { if (window.confirm("Re-opening will revert balances to their calculated values. Are you sure?")) { setMonthlyData(prev => { const updatedMonth = { ...prev[monthKey] }; delete updatedMonth.closingBalances; return { ...prev, [monthKey]: updatedMonth }; }); } };
   const handleSyncBlueprint = () => { const oneTimeBills = currentBills.filter(cb => cb.id.startsWith('modal-') || cb.id.startsWith('onetime-')); const syncedRecurring = currentBills.filter(cb => !cb.isSavings && !cb.id.startsWith('modal-') && !cb.id.startsWith('onetime-')).map(cb => { const master = recurringBills.find(rb => rb.id === cb.id); if (master) return { ...cb, name: master.name, amount: master.amount, dueDate: master.dueDate, owner: master.owner, originalOwner: master.owner, category: master.category }; return null; }).filter(Boolean); const syncedGoals = currentBills.filter(cb => cb.isSavings).map(cb => { const master = savingsGoals.find(sg => sg.id === cb.goalId && sg.totalPaid < sg.target); if (master) return { ...cb, name: `🎯 ${master.name}`, amount: master.monthlyMin, owner: master.owner, originalOwner: master.owner, category: 'savings' }; return null; }).filter(Boolean); const missingRecurring = recurringBills.filter(rb => !syncedRecurring.some(cb => cb.id === rb.id)).map(b => ({ ...b, snapshotId: `${monthKey}-${b.id}-${Math.random().toString(36).substring(7)}`, isPaid: false, columnId: 'pay1', originalOwner: b.owner, category: b.category })); const missingGoals = savingsGoals.filter(g => g.totalPaid < g.target && !syncedGoals.some(cb => cb.goalId === g.id)).map(g => ({ id: `goal-${g.id}`, snapshotId: `${monthKey}-goal-${g.id}-${Math.random().toString(36).substring(7)}`, name: `🎯 ${g.name}`, amount: g.monthlyMin, dueDate: 28, columnId: 'pay2', owner: g.owner, isPaid: false, isSavings: true, goalId: g.id, originalOwner: g.owner, category: 'savings' })); updateCurrentMonth([...oneTimeBills, ...syncedRecurring, ...syncedGoals, ...missingRecurring, ...missingGoals], undefined); };
   const handleModalSubmit = (e) => { e.preventDefault(); if (!modalData.name || !modalData.amount) return; const amount = parseFloat(modalData.amount); if (isNaN(amount)) return; const newBill = { id: `modal-${Date.now()}`, snapshotId: `modal-${Date.now()}`, name: modalType === 'onetime' ? `(One-Time) ${modalData.name}` : `🎯 ${modalData.name}`, amount: amount, dueDate: currentDate.getDate(), columnId: modalData.columnId, owner: modalData.owner, originalOwner: modalData.owner, category: modalData.category || 'other', isPaid: false, isSavings: modalType === 'extraSavings', goalId: modalData.goalId }; updateCurrentMonth([...currentBills, newBill], undefined); setIsModalOpen(false); };
   const handleIncomeChange = (owner, period, value) => updateCurrentMonth(undefined, { ...currentIncomes, [`${owner}_${period}`]: value });
   const onDragEnd = (result) => { if (!result.destination) return; const { draggableId, destination } = result; const destParts = destination.droppableId.split('-'); const newColumnId = destParts.pop(); const newOwner = destParts.join('-'); const newBills = currentBills.map(bill => { if (bill.snapshotId === draggableId) { return { ...bill, columnId: newColumnId, owner: newOwner, originalOwner: bill.originalOwner || bill.owner }; } return bill; }); updateCurrentMonth(newBills, undefined); };
-  const handleSectionBalance = (targetOwner) => { const ownerBills = currentBills.filter(b => b.owner === targetOwner); const otherBills = currentBills.filter(b => b.owner !== targetOwner); let inc1 = 0, inc2 = 0; if (targetOwner !== 'Shared') { inc1 = parseFloat(currentIncomes[`${targetOwner}_p1`] || 0); inc2 = parseFloat(currentIncomes[`${targetOwner}_p2`] || 0); } const { col1, col2 } = autoBalanceBudget(inc1, inc2, ownerBills); updateCurrentMonth([...otherBills, ...col1, ...col2], undefined); };
-  const handleBalanceEverything = () => { let allBalancedBills = []; const sharedBills = currentBills.filter(b => b.owner === 'Shared'); const sharedBalanced = autoBalanceBudget(0, 0, sharedBills); allBalancedBills.push(...sharedBalanced.col1, ...sharedBalanced.col2); owners.filter(o => o !== 'Shared').forEach(owner => { const ownerBills = currentBills.filter(b => b.owner === owner); const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); const ownerBalanced = autoBalanceBudget(inc1, inc2, ownerBills); allBalancedBills.push(...ownerBalanced.col1, ...ownerBalanced.col2); }); const unknownBills = currentBills.filter(b => !owners.includes(b.owner) && b.owner !== 'Shared'); allBalancedBills.push(...unknownBills); updateCurrentMonth(allBalancedBills, undefined); };
-  const handleAddTodo = (text, owner, columnId) => { if (!text.trim()) return; const newTodo = { id: `todo-${Date.now()}-${Math.random()}`, text: text, completed: false, owner: owner || 'Shared', columnId: columnId || 'global' }; updateCurrentMonth(undefined, undefined, [...currentTodos, newTodo]); };
+  
+  const handleSectionBalance = (targetOwner) => { const ownerBills = currentBills.filter(b => b.owner === targetOwner); const otherBills = currentBills.filter(b => b.owner !== targetOwner); let inc1 = 0, inc2 = 0; if (targetOwner !== jointPoolName) { inc1 = parseFloat(currentIncomes[`${targetOwner}_p1`] || 0); inc2 = parseFloat(currentIncomes[`${targetOwner}_p2`] || 0); } const { col1, col2 } = autoBalanceBudget(inc1, inc2, ownerBills); updateCurrentMonth([...otherBills, ...col1, ...col2], undefined); };
+  const handleBalanceEverything = () => { 
+    let allBalancedBills = []; 
+    if (hasJointPool) {
+      const sharedBills = currentBills.filter(b => b.owner === jointPoolName); 
+      const sharedBalanced = autoBalanceBudget(0, 0, sharedBills); 
+      allBalancedBills.push(...sharedBalanced.col1, ...sharedBalanced.col2); 
+    }
+    owners.forEach(owner => { 
+      const ownerBills = currentBills.filter(b => b.owner === owner); 
+      const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); 
+      const ownerBalanced = autoBalanceBudget(inc1, inc2, ownerBills); 
+      allBalancedBills.push(...ownerBalanced.col1, ...ownerBalanced.col2); 
+    }); 
+    const knownEntities = hasJointPool ? [jointPoolName, ...owners] : owners;
+    const unknownBills = currentBills.filter(b => !knownEntities.includes(b.owner)); 
+    allBalancedBills.push(...unknownBills); 
+    updateCurrentMonth(allBalancedBills, undefined); 
+  };
+  
+  const handleAddTodo = (text, owner, columnId) => { if (!text.trim()) return; const newTodo = { id: `todo-${Date.now()}-${Math.random()}`, text: text, completed: false, owner: owner || (hasJointPool ? jointPoolName : owners[0]), columnId: columnId || 'global' }; updateCurrentMonth(undefined, undefined, [...currentTodos, newTodo]); };
   const handleToggleTodo = (id) => { const updatedTodos = currentTodos.map(t => t.id === id ? { ...t, completed: !t.completed } : t); updateCurrentMonth(undefined, undefined, updatedTodos); };
   const handleDeleteTodo = (id) => { const updatedTodos = currentTodos.filter(t => t.id !== id); updateCurrentMonth(undefined, undefined, updatedTodos); };
   const togglePaid = (snapshotId) => { const bill = currentBills.find(b => b.snapshotId === snapshotId); if (!bill) return; const isNowPaid = !bill.isPaid; const newBills = currentBills.map(b => b.snapshotId === snapshotId ? { ...b, isPaid: isNowPaid } : b); updateCurrentMonth(newBills, undefined); if (bill.isSavings) { setSavingsGoals(prev => prev.map(g => g.id === bill.goalId ? { ...g, totalPaid: g.totalPaid + (isNowPaid ? bill.amount : -bill.amount) } : g)); } };
@@ -259,49 +317,31 @@ export default function App() {
   const openOneTimeModal = (owner, columnId) => { setModalType('onetime'); setModalData({ owner, columnId, name: '', amount: '', goalId: null, category: 'other' }); setIsModalOpen(true); };
   const openExtraSavingsModal = (goal) => { setModalType('extraSavings'); setModalData({ owner: goal.owner, columnId: 'pay1', name: `Extra: ${goal.name}`, amount: '', goalId: goal.id, category: 'savings' }); setIsModalOpen(true); };
   const changeMonth = (offset) => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + offset); setCurrentDate(newDate); };
-  const handleOnboardingComplete = ({ finalSharedName, finalOwners, finalBills }) => {
-    setSharedName(finalSharedName);
-    
-    // FORCE internal logic to maintain 'Shared' as the base reference
-    const safeOwners = ['Shared', ...finalOwners.filter(o => o !== finalSharedName && o !== 'Shared')];
-    setOwners(safeOwners);
-    
-    // Map initial bills to 'Shared' if they were assigned to the custom name
-    const safeBills = finalBills.map(b => ({
-      ...b, 
-      owner: b.owner === finalSharedName ? 'Shared' : b.owner 
-    }));
-    
-    setRecurringBills(safeBills);
+  
+  const handleOnboardingComplete = ({ finalOwners, hasJointPool, jointPoolName, finalBills }) => {
+    setOwners(finalOwners);
+    setHasJointPool(hasJointPool);
+    if (hasJointPool) setJointPoolName(jointPoolName);
+    setRecurringBills(finalBills);
     setShowOnboarding(false);
   };
+  
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("Password updated successfully!");
-      setIsRecoveringPassword(false); // Drops them back into the normal app flow
-      loadUserData(session.user.id);
-    }
+    if (error) { alert(error.message); } else { alert("Password updated successfully!"); setIsRecoveringPassword(false); loadUserData(session.user.id); }
   };
-
 
   // ==========================================
   // 4. RENDER GATE (MUST BE LAST)
   // ==========================================
   if (!session) {
-    if (publicRoute === 'landing') {
-      return <Landing onSignIn={() => setPublicRoute('signin')} onSignUp={() => setPublicRoute('signup')} />;
-    }
+    if (publicRoute === 'landing') return <Landing onSignIn={() => setPublicRoute('signin')} onSignUp={() => setPublicRoute('signup')} />;
     return <Auth initialMode={publicRoute} onBack={() => setPublicRoute('landing')} />;
   }
 
   if (isLoadingData) return <div style={{height: '100vh', display:'flex', justifyContent:'center', alignItems:'center', background: 'var(--bg)', color:'var(--text)'}}><Loader2 className="spin" size={40}/></div>;
   
-  // Intercept users returning from a password reset email
   if (isRecoveringPassword) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
@@ -310,15 +350,7 @@ export default function App() {
           <h2 style={{ marginTop: 0 }}>Reset Your Password</h2>
           <p style={{ color: 'var(--text-dim)', marginBottom: 20 }}>Enter a new, strong password below.</p>
           <form onSubmit={handleUpdatePassword} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-            <input 
-              type="password" 
-              className="input-field" 
-              placeholder="New Password" 
-              value={newPassword} 
-              onChange={(e) => setNewPassword(e.target.value)} 
-              required 
-              autoFocus
-            />
+            <input type="password" className="input-field" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required autoFocus />
             <button type="submit" className="btn-primary" style={{ justifyContent: 'center', padding: 12 }}>Update Password</button>
           </form>
         </div>
@@ -326,12 +358,12 @@ export default function App() {
     );
   }
   
-  
-  // Intercept brand new users
   if (showOnboarding) {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
+  // Calculate master list of entities for dropdowns & mapping based on topology
+  const allEntities = hasJointPool ? [jointPoolName, ...owners] : owners;
 
   return (
     <div className="app-container">
@@ -354,15 +386,32 @@ export default function App() {
                 <div><h1 style={{fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 10}}>Budget Snapshot{isMonthClosed && <span className="closed-badge"><Lock size={12}/> Closed</span>}</h1><p className="subtitle">Managing {monthLabel}</p></div>
                 <div style={{display: 'flex', gap: '10px'}}>{!isMonthClosed ? (<button className="btn-close-books" onClick={openClosingModal}><CheckSquare size={16} /> Close Books</button>) : (<button className="btn-reopen-books" onClick={handleReopenBooks}><Unlock size={16} /> Re-open Books</button>)}<div className="view-toggle"><button className={dashboardMode === 'board' ? 'active' : ''} onClick={() => setDashboardMode('board')}><Kanban size={16}/> Board</button><button className={dashboardMode === 'charts' ? 'active' : ''} onClick={() => setDashboardMode('charts')}><PieChartIcon size={16}/> Charts</button></div><button className="btn-sync" onClick={handleSyncBlueprint} title="Pull updates from Master Blueprints"><RefreshCcw size={16} /> Sync</button><button className="btn-balance-all" onClick={handleBalanceEverything}><RefreshCw size={18} /> Balance All</button></div>
               </div>
-              <div className="split-summary-card" style={{width: '100%', boxSizing: 'border-box'}}><div className="split-row"><span className="label"><Users size={16}/> {sharedName} Total</span><span className="value">${(sharedP1 + sharedP2).toFixed(2)}</span></div><div className="split-divider"></div><div className="split-row highlight"><span className="label">Each Pays</span><span className="value text-accent">${((sharedP1 + sharedP2) / peopleCount).toFixed(0)}</span></div><div className="split-row" style={{ marginTop: 4 }}><span className="label" style={{ fontSize: '0.75rem' }}>Per Check Split</span><span className="value" style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: 600 }}>C1: ${splitP1.toFixed(0)} <span style={{ opacity: 0.5, margin: '0 4px' }}>|</span> C2: ${splitP2.toFixed(0)}</span></div></div>
+              
+              {/* TOPOLOGY AWARE SUMMARY CARD */}
+              <div className="split-summary-card" style={{width: '100%', boxSizing: 'border-box'}}>
+                {hasJointPool ? (
+                  <>
+                    <div className="split-row"><span className="label"><Users size={16}/> {jointPoolName} Total</span><span className="value">${(sharedP1 + sharedP2).toFixed(2)}</span></div>
+                    <div className="split-divider"></div>
+                    <div className="split-row highlight"><span className="label">Each Pays</span><span className="value text-accent">${((sharedP1 + sharedP2) / peopleCount).toFixed(0)}</span></div>
+                    <div className="split-row" style={{ marginTop: 4 }}><span className="label" style={{ fontSize: '0.75rem' }}>Per Check Split</span><span className="value" style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: 600 }}>C1: ${splitP1.toFixed(0)} <span style={{ opacity: 0.5, margin: '0 4px' }}>|</span> C2: ${splitP2.toFixed(0)}</span></div>
+                  </>
+                ) : (
+                  <div className="split-row" style={{ justifyContent: 'space-between' }}>
+                    <span className="label" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.1rem' }}><Wallet size={20} color="var(--accent)"/> Total Household Output</span>
+                    <span className="value text-accent" style={{ fontSize: '1.4rem' }}>${currentBills.reduce((s, b) => s + b.amount, 0).toFixed(0)}</span>
+                  </div>
+                )}
+              </div>
             </header>
+            
             {dashboardMode === 'charts' ? (
-              <div className="charts-grid animate-fade-in"><div className="chart-card"><div className="chart-header-row"><h3>Spending Breakdown</h3><div style={{display:'flex', gap:8}}><div className="select-wrapper-small" style={{marginRight: 4}}><Layers size={14} className="icon"/><select value={chartGroupBy} onChange={(e) => setChartGroupBy(e.target.value)}><option value="owner">By Owner</option><option value="category">By Category</option></select></div><div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={breakdownFilter} onChange={(e) => setBreakdownFilter(e.target.value)}><option value="All">All Owners</option>{owners.filter(o => o !== 'Shared').map(o => <option key={o} value={o}>{o}</option>)}</select></div><button className="btn-icon-only" onClick={() => setExpandedChart('breakdown')}><Maximize2 size={16}/></button></div></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('breakdown')}</div></div><div className="chart-card"><div className="chart-header-row"><h3>Money In vs Money Out</h3><div style={{display:'flex', gap:8}}><div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={cashFlowFilter} onChange={(e) => setCashFlowFilter(e.target.value)}><option value="All">Household</option>{owners.filter(o => o !== 'Shared').map(o => <option key={o} value={o}>{o}</option>)}</select></div><button className="btn-icon-only" onClick={() => setExpandedChart('cashflow')}><Maximize2 size={16}/></button></div></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('cashflow')}</div></div><div className="chart-card"><div className="chart-header-row"><h3>Fixed Bills vs Free Cash</h3><button className="btn-icon-only" onClick={() => setExpandedChart('burden')}><Maximize2 size={16}/></button></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('burden')}</div></div><div className="chart-card"><div className="chart-header-row"><h3>6-Month Financial Trend</h3><button className="btn-icon-only" onClick={() => setExpandedChart('trend')}><Maximize2 size={16}/></button></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('trend')}</div></div></div>
+              <div className="charts-grid animate-fade-in"><div className="chart-card"><div className="chart-header-row"><h3>Spending Breakdown</h3><div style={{display:'flex', gap:8}}><div className="select-wrapper-small" style={{marginRight: 4}}><Layers size={14} className="icon"/><select value={chartGroupBy} onChange={(e) => setChartGroupBy(e.target.value)}><option value="owner">By Owner</option><option value="category">By Category</option></select></div><div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={breakdownFilter} onChange={(e) => setBreakdownFilter(e.target.value)}><option value="All">All Owners</option>{owners.map(o => <option key={o} value={o}>{o}</option>)}</select></div><button className="btn-icon-only" onClick={() => setExpandedChart('breakdown')}><Maximize2 size={16}/></button></div></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('breakdown')}</div></div><div className="chart-card"><div className="chart-header-row"><h3>Money In vs Money Out</h3><div style={{display:'flex', gap:8}}><div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={cashFlowFilter} onChange={(e) => setCashFlowFilter(e.target.value)}><option value="All">Household</option>{owners.map(o => <option key={o} value={o}>{o}</option>)}</select></div><button className="btn-icon-only" onClick={() => setExpandedChart('cashflow')}><Maximize2 size={16}/></button></div></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('cashflow')}</div></div><div className="chart-card"><div className="chart-header-row"><h3>Fixed Bills vs Free Cash</h3><button className="btn-icon-only" onClick={() => setExpandedChart('burden')}><Maximize2 size={16}/></button></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('burden')}</div></div><div className="chart-card"><div className="chart-header-row"><h3>6-Month Financial Trend</h3><button className="btn-icon-only" onClick={() => setExpandedChart('trend')}><Maximize2 size={16}/></button></div><div style={{ width: '100%', height: 300 }}>{renderChartContent('trend')}</div></div></div>
             ) : (
               <>
                 {savingsGoals.filter(g => g.totalPaid < g.target).length > 0 && (<div className="savings-widget"><h3 style={{marginTop: 0, fontSize: '1.1rem', color: 'var(--text-dim)'}}><Target size={16} style={{marginRight:6, verticalAlign: 'text-bottom'}}/> Active Savings & Repayments</h3><div className="savings-widget-grid">{savingsGoals.filter(g => g.totalPaid < g.target).map(goal => { const progress = Math.min(100, Math.round((goal.totalPaid / goal.target) * 100)); return ( <div key={goal.id} className="savings-mini-card"> <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}> <span style={{fontWeight: 600}}>{goal.name}</span> <button className="btn-add-quick" onClick={() => openExtraSavingsModal(goal)} title="Throw extra cash at this goal"><Plus size={14}/> Extra</button> </div> <div className="goal-progress-bar"><div className="goal-progress-fill" style={{width: `${progress}%`}}></div></div> <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)'}}><span>${goal.totalPaid} / ${goal.target}</span><span>{progress}%</span></div> </div> ) })}</div></div>)}
                 <div className="income-grid">
-                  {owners.filter(o => o !== 'Shared').map(owner => (
+                  {owners.map(owner => (
                     <div key={owner} className="person-income-card">
                       <div className="person-header"><div style={{display:'flex', alignItems:'center', gap:8}}><User size={18}/> {owner}</div><div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end'}}>{getPersonStats(owner).rollover !== 0 && (<span style={{fontSize: '0.75rem', color: getPersonStats(owner).rollover > 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600, marginBottom: 2}}>{getPersonStats(owner).rollover > 0 ? '+' : ''}${getPersonStats(owner).rollover.toFixed(0)} Rolled Over</span>)}<span className={`free-cash-badge ${getPersonStats(owner).totalFree < 0 ? 'neg' : 'pos'}`}>Total Free: ${getPersonStats(owner).totalFree.toFixed(0)}</span></div></div>
                       <div className="income-inputs">
@@ -373,67 +422,76 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                <ChecklistWidget title={`${monthLabel} Overview`} todos={currentTodos.filter(t => !t.columnId || t.columnId === 'global')} onAdd={(text) => handleAddTodo(text, 'Shared', 'global')} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} variant="global" />
+                
+                <ChecklistWidget title={`${monthLabel} Overview`} todos={currentTodos.filter(t => !t.columnId || t.columnId === 'global')} onAdd={(text) => handleAddTodo(text, hasJointPool ? jointPoolName : owners[0], 'global')} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} variant="global" />
                 
                 <DragDropContext onDragEnd={onDragEnd}>
-                  {/* NEW INTERACTIVE SHARED BILLS HEADER IN THE BALANCESECTION CALL */}
-                  <BalanceSection 
-                    title={
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        <span>🏠</span>
-                        {isEditingSharedName ? (
-                          <input 
-                            autoFocus 
-                            value={tempSharedName} 
-                            onChange={(e) => setTempSharedName(e.target.value)} 
-                            onBlur={() => { setSharedName(tempSharedName || 'Shared'); setIsEditingSharedName(false); }} 
-                            onKeyDown={(e) => { if (e.key === 'Enter') { setSharedName(tempSharedName || 'Shared'); setIsEditingSharedName(false); } }} 
-                            style={{ background: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--accent)', borderRadius: 4, padding: '0px 4px', fontSize: 'inherit', fontWeight: 'inherit', outline: 'none', width: '120px' }} 
-                          />
-                        ) : (
-                          <span 
-                            onClick={() => { setTempSharedName(sharedName); setIsEditingSharedName(true); }} 
-                            style={{ cursor: 'pointer', borderBottom: '1px dashed var(--accent)' }} 
-                            title="Click to rename"
-                          >
-                            {sharedName} Bills
-                          </span>
-                        )}
-                      </div>
-                    } 
-                    owner="Shared" 
-                    bills={currentBills} 
-                    isShared={true} 
-                    onTogglePaid={togglePaid} 
-                    onDelete={deleteFromDashboard} 
-                    onAddOneTime={openOneTimeModal} 
-                    onBalance={handleSectionBalance} 
-                    onAddTodo={(text, col) => handleAddTodo(text, 'Shared', col)} 
-                    todos={currentTodos.filter(t => t.owner === 'Shared')} 
-                    onToggleTodo={handleToggleTodo} 
-                    onDeleteTodo={handleDeleteTodo} 
-                  />
-                  {owners.filter(o => o !== 'Shared').map(owner => (<BalanceSection key={owner} title={`👤 ${owner}'s Bills`} owner={owner} bills={currentBills} isShared={false} onTogglePaid={togglePaid} onDelete={deleteFromDashboard} onAddOneTime={openOneTimeModal} onBalance={handleSectionBalance} onAddTodo={(text, col) => handleAddTodo(text, owner, col)} todos={currentTodos.filter(t => t.owner === owner)} onToggleTodo={handleToggleTodo} onDeleteTodo={handleDeleteTodo} />))}
+                  {hasJointPool && (
+                    <BalanceSection 
+                      title={
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                          <span>🏠</span>
+                          {isEditingJointPoolName ? (
+                            <input autoFocus value={tempJointPoolName} onChange={(e) => setTempJointPoolName(e.target.value)} onBlur={() => { setJointPoolName(tempJointPoolName || 'House Bills'); setIsEditingJointPoolName(false); }} onKeyDown={(e) => { if (e.key === 'Enter') { setJointPoolName(tempJointPoolName || 'House Bills'); setIsEditingJointPoolName(false); } }} style={{ background: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--accent)', borderRadius: 4, padding: '0px 4px', fontSize: 'inherit', fontWeight: 'inherit', outline: 'none', width: '120px' }} />
+                          ) : (
+                            <span onClick={() => { setTempJointPoolName(jointPoolName); setIsEditingJointPoolName(true); }} style={{ cursor: 'pointer', borderBottom: '1px dashed var(--accent)' }} title="Click to rename">{jointPoolName}</span>
+                          )}
+                        </div>
+                      } 
+                      owner={jointPoolName} 
+                      bills={currentBills} 
+                      isShared={true} 
+                      onTogglePaid={togglePaid} 
+                      onDelete={deleteFromDashboard} 
+                      onAddOneTime={openOneTimeModal} 
+                      onBalance={handleSectionBalance} 
+                      onAddTodo={(text, col) => handleAddTodo(text, jointPoolName, col)} 
+                      todos={currentTodos.filter(t => t.owner === jointPoolName)} 
+                      onToggleTodo={handleToggleTodo} 
+                      onDeleteTodo={handleDeleteTodo} 
+                    />
+                  )}
+                  {owners.map(owner => (<BalanceSection key={owner} title={`👤 ${owner}'s Bills`} owner={owner} bills={currentBills} isShared={false} onTogglePaid={togglePaid} onDelete={deleteFromDashboard} onAddOneTime={openOneTimeModal} onBalance={handleSectionBalance} onAddTodo={(text, col) => handleAddTodo(text, owner, col)} todos={currentTodos.filter(t => t.owner === owner)} onToggleTodo={handleToggleTodo} onDeleteTodo={handleDeleteTodo} />))}
                 </DragDropContext>
               </>
             )}
           </div>
         )}
-        {view === 'bills' && <RecurringBills bills={recurringBills} onAddBill={addRecurring} onEditBill={updateRecurring} onDeleteBill={deleteRecurring} owners={owners} categories={categories} />}
-        {view === 'goals' && <SavingsManager goals={savingsGoals} onAddGoal={addGoal} onEditGoal={updateGoal} onDeleteGoal={deleteGoal} owners={owners} />}
-        {view === 'forecast' && ( <div className="animate-fade-in"> <div className="month-selector"><button onClick={() => changeMonth(-1)}><ChevronLeft size={24}/></button><h2>{monthLabel}</h2><button onClick={() => changeMonth(1)}><ChevronRight size={24}/></button></div> {(() => { let totalRollover = 0; owners.filter(o => o !== 'Shared').forEach(owner => { totalRollover += getRollover(monthKey, owner); }); return <Forecast bills={currentBills} currentDate={currentDate} monthLabel={monthLabel} incomes={currentIncomes} owners={owners} rollover={totalRollover} />; })()} </div> )}
-        {view === 'settings' && <Settings currentTheme={theme} setTheme={setTheme} owners={owners} onAddOwner={setOwners} onDeleteOwner={(name) => setOwners(owners.filter(o => o !== name))} sharedName={sharedName} setSharedName={setSharedName} appStartDate={appStartDate} startingBalances={startingBalances} setStartingBalances={setStartingBalances} categories={categories} setCategories={setCategories} />}      </main>
+        
+        {/* Pass allEntities down to sub-components instead of raw owners array */}
+        {view === 'bills' && <RecurringBills bills={recurringBills} onAddBill={addRecurring} onEditBill={updateRecurring} onDeleteBill={deleteRecurring} owners={allEntities} categories={categories} />}
+        {view === 'goals' && <SavingsManager goals={savingsGoals} onAddGoal={addGoal} onEditGoal={updateGoal} onDeleteGoal={deleteGoal} owners={allEntities} />}
+        {view === 'forecast' && ( <div className="animate-fade-in"> <div className="month-selector"><button onClick={() => changeMonth(-1)}><ChevronLeft size={24}/></button><h2>{monthLabel}</h2><button onClick={() => changeMonth(1)}><ChevronRight size={24}/></button></div> {(() => { let totalRollover = 0; owners.forEach(owner => { totalRollover += getRollover(monthKey, owner); }); return <Forecast bills={currentBills} currentDate={currentDate} monthLabel={monthLabel} incomes={currentIncomes} owners={allEntities} rollover={totalRollover} />; })()} </div> )}
+        
+        {/* Fallback prop mapping to keep current Settings.jsx alive before we rewrite it */}
+        {view === 'settings' && (
+          <Settings 
+            currentTheme={theme} 
+            setTheme={setTheme} 
+            owners={owners} 
+            setOwners={setOwners} 
+            hasJointPool={hasJointPool} 
+            setHasJointPool={setHasJointPool}
+            jointPoolName={jointPoolName} 
+            setJointPoolName={setJointPoolName} 
+            appStartDate={appStartDate} 
+            startingBalances={startingBalances} 
+            setStartingBalances={setStartingBalances} 
+            categories={categories} 
+            setCategories={setCategories} 
+          />
+        )}      </main>
 
       {/* MODALS */}
       {isModalOpen && (<div className="modal-overlay"><div className="modal-card animate-fade-in"><div className="modal-header"><h3 style={{margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8}}>{modalType === 'onetime' ? <Plus size={20}/> : <Target size={20}/>} {modalType === 'onetime' ? 'Add One-Time Bill' : 'Throw Extra Cash'}</h3><button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button></div><form onSubmit={handleModalSubmit} className="add-bill-form"><p className="subtitle" style={{marginBottom: 20, marginTop: 0}}>{modalType === 'onetime' ? `Adding to ${modalData.owner}'s check.` : `How much extra are you putting towards ${modalData.name.replace('Extra: ', '')}?`}</p>{modalType === 'onetime' && (<input autoFocus className="input-field" placeholder="What is the expense?" value={modalData.name} onChange={(e) => setModalData({ ...modalData, name: e.target.value })} />)}<div className="form-row"><input type="number" autoFocus={modalType !== 'onetime'} className="input-field" placeholder="Amount ($)" value={modalData.amount} onChange={(e) => setModalData({ ...modalData, amount: e.target.value })} /><select className="input-field" value={modalData.columnId} onChange={(e) => setModalData({ ...modalData, columnId: e.target.value })}><option value="pay1">From Paycheck 1</option><option value="pay2">From Paycheck 2</option></select></div>{modalType === 'onetime' && (<div style={{marginTop: 10}}><select className="input-field" value={modalData.category} onChange={e => setModalData({...modalData, category: e.target.value})}>{Object.entries(categories).map(([key, cat]) => (<option key={key} value={key}>{cat.label}</option>))}</select></div>)}<div className="form-actions" style={{justifyContent: 'flex-end', marginTop: 15}}><button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="btn-primary">{modalType === 'onetime' ? 'Add Expense' : 'Add Payment'}</button></div></form></div></div>)}
-      {expandedChart && (<div className="chart-modal-overlay"><div className="chart-modal-content animate-fade-in"><button className="btn-close-chart" onClick={() => setExpandedChart(null)}><X size={24} /></button><div className="modal-chart-header" style={{marginBottom: 20, display: 'flex', alignItems: 'center', gap: 15}}><h2 style={{margin: 0}}>{expandedChart === 'breakdown' && 'Spending Breakdown'}{expandedChart === 'cashflow' && 'Money In vs Money Out'}{expandedChart === 'burden' && 'Fixed Bills vs Free Cash'}{expandedChart === 'trend' && '6-Month Financial Trend'}</h2>{expandedChart === 'breakdown' && (<div className="select-wrapper-small" style={{marginRight: 4}}><Layers size={14} className="icon"/><select value={chartGroupBy} onChange={(e) => setChartGroupBy(e.target.value)}><option value="owner">By Owner</option><option value="category">By Category</option></select></div>)}{expandedChart === 'breakdown' && (<div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={breakdownFilter} onChange={(e) => setBreakdownFilter(e.target.value)}><option value="All">All Owners</option>{owners.filter(o => o !== 'Shared').map(o => <option key={o} value={o}>{o}</option>)}</select></div>)} {expandedChart === 'cashflow' && (<div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={cashFlowFilter} onChange={(e) => setCashFlowFilter(e.target.value)}><option value="All">Household</option>{owners.filter(o => o !== 'Shared').map(o => <option key={o} value={o}>{o}</option>)}</select></div>)}</div><div style={{flex: 1, width: '100%', minHeight: 0}}>{renderChartContent(expandedChart)}</div></div></div>)}
+      {expandedChart && (<div className="chart-modal-overlay"><div className="chart-modal-content animate-fade-in"><button className="btn-close-chart" onClick={() => setExpandedChart(null)}><X size={24} /></button><div className="modal-chart-header" style={{marginBottom: 20, display: 'flex', alignItems: 'center', gap: 15}}><h2 style={{margin: 0}}>{expandedChart === 'breakdown' && 'Spending Breakdown'}{expandedChart === 'cashflow' && 'Money In vs Money Out'}{expandedChart === 'burden' && 'Fixed Bills vs Free Cash'}{expandedChart === 'trend' && '6-Month Financial Trend'}</h2>{expandedChart === 'breakdown' && (<div className="select-wrapper-small" style={{marginRight: 4}}><Layers size={14} className="icon"/><select value={chartGroupBy} onChange={(e) => setChartGroupBy(e.target.value)}><option value="owner">By Owner</option><option value="category">By Category</option></select></div>)}{expandedChart === 'breakdown' && (<div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={breakdownFilter} onChange={(e) => setBreakdownFilter(e.target.value)}><option value="All">All Owners</option>{owners.map(o => <option key={o} value={o}>{o}</option>)}</select></div>)} {expandedChart === 'cashflow' && (<div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={cashFlowFilter} onChange={(e) => setCashFlowFilter(e.target.value)}><option value="All">Household</option>{owners.map(o => <option key={o} value={o}>{o}</option>)}</select></div>)}</div><div style={{flex: 1, width: '100%', minHeight: 0}}>{renderChartContent(expandedChart)}</div></div></div>)}
       {isClosingOpen && (
         <div className="modal-overlay">
           <div className="modal-card animate-fade-in" style={{maxWidth: 500}}>
             <div className="modal-header"><h3 style={{margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8}}><CheckSquare size={20} color="var(--green)"/> Close Books for {monthLabel}</h3><button className="btn-close" onClick={() => setIsClosingOpen(false)}><X size={20} /></button></div>
             <form onSubmit={handleCloseBooks} className="add-bill-form">
               <div className="modal-intro" style={{marginBottom: 20, background: 'var(--bg)', padding: 15, borderRadius: 8, fontSize: '0.9rem', color: 'var(--text)'}}><p style={{margin: 0}}>This will finalize the month. Any difference between your <b>Expected</b> cash and <b>Actual</b> cash will be saved as an adjustment for next month.</p></div>
-              {owners.filter(o => o !== 'Shared').map(owner => { const stats = getPersonStats(owner); const projected = stats.totalFree; return ( <div key={owner} style={{marginBottom: 15}}> <div style={{display:'flex', justifyContent:'space-between', marginBottom: 6, fontSize: '0.9rem'}}> <span style={{fontWeight: 600}}>{owner}</span> <span style={{color: 'var(--text-dim)'}}>Expected: ${projected.toFixed(0)}</span> </div> <div className="form-row"> <input type="number" className="input-field" placeholder="Actual Bank Balance" value={closingBalances[owner] || ''} onChange={(e) => setClosingBalances({...closingBalances, [owner]: parseFloat(e.target.value)})} required autoFocus={owner === owners[1]} /> </div> {closingBalances[owner] !== undefined && ( <div style={{textAlign: 'right', fontSize: '0.8rem', marginTop: 4, color: (closingBalances[owner] - projected) >= 0 ? 'var(--green)' : 'var(--red)'}}> Difference: {(closingBalances[owner] - projected) > 0 ? '+' : ''}${(closingBalances[owner] - projected).toFixed(0)} </div> )} </div> ); })}
+              {owners.map(owner => { const stats = getPersonStats(owner); const projected = stats.totalFree; return ( <div key={owner} style={{marginBottom: 15}}> <div style={{display:'flex', justifyContent:'space-between', marginBottom: 6, fontSize: '0.9rem'}}> <span style={{fontWeight: 600}}>{owner}</span> <span style={{color: 'var(--text-dim)'}}>Expected: ${projected.toFixed(0)}</span> </div> <div className="form-row"> <input type="number" className="input-field" placeholder="Actual Bank Balance" value={closingBalances[owner] || ''} onChange={(e) => setClosingBalances({...closingBalances, [owner]: parseFloat(e.target.value)})} required autoFocus={owner === owners[0]} /> </div> {closingBalances[owner] !== undefined && ( <div style={{textAlign: 'right', fontSize: '0.8rem', marginTop: 4, color: (closingBalances[owner] - projected) >= 0 ? 'var(--green)' : 'var(--red)'}}> Difference: {(closingBalances[owner] - projected) > 0 ? '+' : ''}${(closingBalances[owner] - projected).toFixed(0)} </div> )} </div> ); })}
               <div className="form-actions" style={{justifyContent: 'flex-end', marginTop: 20}}><button type="button" className="btn-cancel" onClick={() => setIsClosingOpen(false)}>Cancel</button><button type="submit" className="btn-primary">Confirm & Close</button></div>
             </form>
           </div>

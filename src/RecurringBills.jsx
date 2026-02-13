@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Save, X } from 'lucide-react';
 
 export default function RecurringBills({ bills, onAddBill, onEditBill, onDeleteBill, owners, categories }) {
@@ -6,8 +6,13 @@ export default function RecurringBills({ bills, onAddBill, onEditBill, onDeleteB
   const [editForm, setEditForm] = useState({ name: '', amount: '', dueDate: '', owner: '', category: 'other' });
   const [isAdding, setIsAdding] = useState(false);
   
-  // FIX 1: Default to owners[0] instead of owners[1]
-  const [addForm, setAddForm] = useState({ name: '', amount: '', dueDate: '', owner: owners[0] || 'Shared', category: 'other' });
+  // Default to the top entity (either the Joint Pool name or the Solo User)
+  const [addForm, setAddForm] = useState({ name: '', amount: '', dueDate: '', owner: owners[0] || '', category: 'other' });
+
+  // Failsafe: If the topology changes in Settings, update the default form owner
+  useEffect(() => {
+    setAddForm(prev => ({ ...prev, owner: owners[0] || '' }));
+  }, [owners]);
 
   const handleEditClick = (bill) => {
     setIsEditing(bill.id);
@@ -22,14 +27,14 @@ export default function RecurringBills({ bills, onAddBill, onEditBill, onDeleteB
   const handleAddSubmit = (e) => {
     e.preventDefault();
     
-    // FIX 2: Failsafe to ensure an owner is ALWAYS attached
-    const finalOwner = addForm.owner || owners[0] || 'Shared';
+    // Ensure an owner is ALWAYS attached natively from the new dynamic array
+    const finalOwner = addForm.owner || owners[0];
     
     onAddBill({ ...addForm, owner: finalOwner, id: `bill-${Date.now()}`, amount: parseFloat(addForm.amount), dueDate: parseInt(addForm.dueDate) });
     setIsAdding(false);
     
-    // Reset to safe defaults
-    setAddForm({ name: '', amount: '', dueDate: '', owner: owners[0] || 'Shared', category: 'other' });
+    // Reset to safe dynamic defaults
+    setAddForm({ name: '', amount: '', dueDate: '', owner: owners[0] || '', category: 'other' });
   };
 
   return (
@@ -78,7 +83,7 @@ export default function RecurringBills({ bills, onAddBill, onEditBill, onDeleteB
 
           return (
             <div key={owner} className="owner-group-section">
-              <h3 className="group-header">{owner}'s Bills</h3>
+              <h3 className="group-header">{owner}</h3>
               <div className="bills-list">
                 {ownerBills.map(bill => (
                   <div key={bill.id} className="bill-row-card">

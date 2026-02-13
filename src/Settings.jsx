@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Moon, Sun, UserPlus, Trash2, Save, Tags, Plus, X, Coffee, Home } from 'lucide-react';
+import { Moon, Sun, UserPlus, Trash2, Tags, Plus, Coffee, Home, Users } from 'lucide-react';
 
 export default function Settings({ 
   currentTheme, setTheme, 
-  owners, onAddOwner, onDeleteOwner, 
-  sharedName, setSharedName, 
+  owners, setOwners, 
+  hasJointPool, setHasJointPool,
+  jointPoolName, setJointPoolName, 
   appStartDate, 
   startingBalances, setStartingBalances, 
   categories, setCategories 
@@ -16,11 +17,15 @@ export default function Settings({
   const handleAddOwner = (e) => {
     e.preventDefault();
     const trimmed = newOwnerName.trim();
-    if (trimmed && !owners.includes(trimmed) && trimmed.toLowerCase() !== 'shared') {
-      onAddOwner([...owners, trimmed]);
+    if (trimmed && !owners.includes(trimmed)) {
+      setOwners([...owners, trimmed]);
       setNewOwnerName('');
-    } else if (trimmed.toLowerCase() === 'shared') {
-      alert('The name "Shared" is reserved for the Base Account.');
+    }
+  };
+
+  const handleDeleteOwner = (ownerToRemove) => {
+    if (window.confirm(`Remove ${ownerToRemove}? Their historical bills will remain, but you won't be able to assign new ones to them.`)) {
+      setOwners(owners.filter(o => o !== ownerToRemove));
     }
   };
 
@@ -29,10 +34,7 @@ export default function Settings({
     if (newCatName) {
       const id = newCatName.toLowerCase().replace(/\s+/g, '_');
       if (!categories[id]) {
-        setCategories({
-          ...categories,
-          [id]: { label: newCatName, color: newCatColor }
-        });
+        setCategories({ ...categories, [id]: { label: newCatName, color: newCatColor } });
         setNewCatName('');
       }
     }
@@ -45,35 +47,72 @@ export default function Settings({
   };
 
   return (
-    <div className="animate-fade-in">
-      <header className="page-header">
-        <h1>Settings</h1>
+    <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: 40 }}>
+      <header className="page-header" style={{ marginBottom: 30 }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', margin: 0 }}>System Settings</h1>
+          <p className="subtitle" style={{ margin: 0 }}>Configure your OmegaBudget workspace</p>
+        </div>
       </header>
 
       <div className="settings-grid">
-        {/* APPEARANCE / THEME SELECTOR */}
+        {/* APPEARANCE */}
         <div className="card settings-card">
           <h3>Appearance</h3>
           <div className="theme-btn-group">
-            <button 
-              className={`theme-btn light ${currentTheme === 'light' ? 'active' : ''}`} 
-              onClick={() => setTheme('light')}
-            >
-              <Sun size={18} /> Light
-            </button>
-            <button 
-              className={`theme-btn dark ${currentTheme === 'dark' ? 'active' : ''}`} 
-              onClick={() => setTheme('dark')}
-            >
-              <Moon size={18} /> Dark
-            </button>
-            <button 
-              className={`theme-btn taupe ${currentTheme === 'taupe' ? 'active' : ''}`} 
-              onClick={() => setTheme('taupe')}
-            >
-              <Coffee size={18} /> Taupe
-            </button>
+            <button className={`theme-btn light ${currentTheme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')}><Sun size={18} /> Light</button>
+            <button className={`theme-btn dark ${currentTheme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')}><Moon size={18} /> Dark</button>
+            <button className={`theme-btn taupe ${currentTheme === 'taupe' ? 'active' : ''}`} onClick={() => setTheme('taupe')}><Coffee size={18} /> Taupe</button>
           </div>
+        </div>
+
+        {/* ACCOUNT STRUCTURE & TOPOLOGY */}
+        <div className="card settings-card" style={{ gridColumn: '1 / -1' }}>
+          <h3><Home size={18} style={{verticalAlign: 'text-bottom', marginRight: 8}}/> Account Structure</h3>
+          
+          <div style={{ background: 'var(--bg)', padding: 20, borderRadius: 8, marginBottom: 25, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 15, cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={hasJointPool} 
+                onChange={(e) => setHasJointPool(e.target.checked)} 
+                style={{ width: 20, height: 20, accentColor: 'var(--accent)' }} 
+              />
+              <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>Enable Shared Expense Pool</span>
+            </label>
+            <p style={{ color: 'var(--text-dim)', margin: '8px 0 0 35px', fontSize: '0.9rem', lineHeight: 1.4 }}>
+              Turn this on if you share joint expenses (like rent or utilities) that are split among household members.
+            </p>
+
+            {hasJointPool && (
+              <div className="animate-fade-in" style={{ marginTop: 20, marginLeft: 35 }}>
+                <label style={{ display: 'block', marginBottom: 8, fontWeight: 600, fontSize: '0.9rem' }}>Shared Pool Name</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  value={jointPoolName}
+                  onChange={(e) => setJointPoolName(e.target.value)}
+                  onBlur={() => { if (!jointPoolName.trim()) setJointPoolName('House Bills'); }}
+                  placeholder="e.g. House Bills, Joint Account"
+                  style={{ maxWidth: '300px' }}
+                />
+              </div>
+            )}
+          </div>
+
+          <h4 style={{marginBottom: 10, fontSize: '0.9rem', color: 'var(--text-dim)'}}><Users size={16} style={{verticalAlign: 'text-bottom', marginRight: 6}}/> Individual Users</h4>
+          <div className="owners-list" style={{ maxWidth: '400px', marginBottom: 15 }}>
+            {owners.map(owner => (
+              <div key={owner} className="owner-item">
+                <span>{owner}</span>
+                <button onClick={() => handleDeleteOwner(owner)} className="btn-icon-only"><Trash2 size={16} /></button>
+              </div>
+            ))}
+          </div>
+          <form onSubmit={handleAddOwner} className="add-owner-form" style={{ maxWidth: '400px' }}>
+            <input type="text" className="input-field" placeholder="Add Name" value={newOwnerName} onChange={(e) => setNewOwnerName(e.target.value)} />
+            <button type="submit" className="btn-primary"><UserPlus size={18} /></button>
+          </form>
         </div>
 
         {/* CATEGORY MANAGER */}
@@ -86,66 +125,14 @@ export default function Settings({
                   <div className="color-dot" style={{backgroundColor: cat.color}}></div>
                   <span>{cat.label}</span>
                 </div>
-                {id !== 'other' && (
-                  <button onClick={() => handleDeleteCategory(id)} className="btn-icon-only"><Trash2 size={14} /></button>
-                )}
+                {id !== 'other' && <button onClick={() => handleDeleteCategory(id)} className="btn-icon-only"><Trash2 size={14} /></button>}
               </div>
             ))}
           </div>
-          
           <form onSubmit={handleAddCategory} className="add-category-form">
-            <input 
-              type="color" 
-              className="color-picker-input"
-              value={newCatColor} 
-              onChange={e => setNewCatColor(e.target.value)} 
-            />
-            <input 
-              type="text"
-              className="input-field" 
-              placeholder="New Category Name" 
-              value={newCatName} 
-              onChange={e => setNewCatName(e.target.value)} 
-            />
+            <input type="color" className="color-picker-input" value={newCatColor} onChange={e => setNewCatColor(e.target.value)} />
+            <input type="text" className="input-field" placeholder="New Category Name" value={newCatName} onChange={e => setNewCatName(e.target.value)} />
             <button type="submit" className="btn-primary"><Plus size={16}/></button>
-          </form>
-        </div>
-
-        {/* ACCOUNT STRUCTURE & MEMBERS */}
-        <div className="card settings-card">
-          <h3><Home size={18} style={{verticalAlign: 'text-bottom', marginRight: 8}}/> Account Structure</h3>
-          
-          <div className="form-group" style={{ marginBottom: 20 }}>
-            <label>Base Account Name</label>
-            <input 
-              type="text" 
-              className="input-field" 
-              value={sharedName}
-              onChange={(e) => setSharedName(e.target.value)}
-              onBlur={() => { if (!sharedName.trim()) setSharedName('Shared'); }}
-              placeholder="e.g. Shared, My Bills, Main Account"
-            />
-            <p className="hint">This renames the default 'Shared Bills' column on the board.</p>
-          </div>
-
-          <h4 style={{marginBottom: 10, fontSize: '0.9rem', color: 'var(--text-dim)'}}>Individual Users</h4>
-          <div className="owners-list">
-            {owners.filter(o => o !== 'Shared').map(owner => (
-              <div key={owner} className="owner-item">
-                <span>{owner}</span>
-                <button onClick={() => onDeleteOwner(owner)} className="btn-icon-only"><Trash2 size={16} /></button>
-              </div>
-            ))}
-          </div>
-          <form onSubmit={handleAddOwner} className="add-owner-form">
-            <input 
-              type="text"
-              className="input-field" 
-              placeholder="Add Name" 
-              value={newOwnerName} 
-              onChange={(e) => setNewOwnerName(e.target.value)} 
-            />
-            <button type="submit" className="btn-primary"><UserPlus size={18} /></button>
           </form>
         </div>
 
@@ -160,16 +147,10 @@ export default function Settings({
           
           <div style={{marginTop: 20}}>
             <h4 style={{marginBottom: 10, fontSize: '0.9rem', color: 'var(--text-dim)'}}>Initial Starting Balances (Rollover Seed)</h4>
-            {owners.filter(o => o !== 'Shared').map(owner => (
+            {owners.map(owner => (
               <div key={owner} className="balance-row">
                 <span>{owner}</span>
-                <input 
-                  type="number" 
-                  className="input-field" 
-                  value={startingBalances[owner] || ''} 
-                  placeholder="0.00"
-                  onChange={(e) => setStartingBalances({...startingBalances, [owner]: e.target.value})}
-                />
+                <input type="number" className="input-field" value={startingBalances[owner] || ''} placeholder="0.00" onChange={(e) => setStartingBalances({...startingBalances, [owner]: e.target.value})} />
               </div>
             ))}
           </div>
