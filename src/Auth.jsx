@@ -34,6 +34,7 @@ export default function Auth() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20, color: 'var(--accent)' }}>
           <Wallet size={40} />
           <h1 style={{ fontSize: '1.8rem', margin: 0 }}>OmegaBudget</h1>
+          <br></br>
           <h3 style={{ fontSize: '1rem', margin: 0 }}>The last budget your family will ever need</h3>
         </div>
         
