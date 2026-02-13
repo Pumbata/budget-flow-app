@@ -2044,3 +2044,94 @@ h1 { margin: 0; font-size: 2rem; }
   border-color: var(--accent);
   color: var(--accent);
 }
+
+
+/* ========================================= */
+/* --- MOBILE RESPONSIVE MEDIA QUERIES --- */
+/* ========================================= */
+
+@media (max-width: 768px) {
+  /* 1. App Layout -> Bottom Navigation */
+  .app-container {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    padding: 10px 5px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    justify-content: space-around;
+    box-sizing: border-box;
+    background: var(--card);
+  }
+  
+  .logo { 
+    display: none; /* Hide logo on mobile bottom bar */ 
+  }
+  
+  .sidebar .nav-item {
+    flex-direction: column;
+    font-size: 0.65rem;
+    padding: 6px;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    text-align: center;
+  }
+  
+  .sidebar .nav-item[style*="margin-top: auto"] {
+    margin-top: 0 !important; /* Fix logout button alignment */
+  }
+  
+  .main-content {
+    padding: 15px;
+    padding-bottom: 90px; /* Leave space so bottom nav doesn't cover content */
+  }
+
+  /* 2. Header & Action Buttons */
+  .page-header > div:first-child {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 15px !important;
+  }
+  
+  .page-header > div:first-child > div:last-child {
+    flex-wrap: wrap; /* Let the action buttons wrap to the next line */
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  /* 3. The Kanban Board Stacking */
+  .balance-grid {
+    grid-template-columns: 1fr; /* Stack Paycheck 1 strictly over Paycheck 2 */
+  }
+
+  /* 4. Chart Grid Fix */
+  .charts-grid {
+    grid-template-columns: 1fr; /* Prevent 400px minmax from causing side-scroll */
+  }
+  
+  /* 5. Income Grid Layout */
+  .income-inputs {
+    flex-direction: column; /* Stack Check 1, Check 2, Extra vertically on tiny screens */
+  }
+  
+  .stats-stack {
+    flex-direction: row; /* Put due/free side by side when stacked */
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  /* 6. Modals */
+  .modal-card {
+    max-width: 90vw;
+  }
+}
