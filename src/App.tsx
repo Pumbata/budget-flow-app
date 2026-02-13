@@ -94,12 +94,10 @@ export default function App() {
 
       if (data) {
         if (data.owners) {
-          // Legacy cleanup: Strip 'Shared' from the array if migrating an old save
           setOwners(data.owners.filter(o => o !== 'Shared')); 
         }
         if (data.has_joint_pool !== undefined) setHasJointPool(data.has_joint_pool);
         if (data.joint_pool_name) setJointPoolName(data.joint_pool_name);
-        // Fallback for older saves that used shared_name
         else if (data.shared_name && data.has_joint_pool === undefined) {
            setJointPoolName(data.shared_name);
            setHasJointPool(true);
@@ -362,7 +360,6 @@ export default function App() {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  // Calculate master list of entities for dropdowns & mapping based on topology
   const allEntities = hasJointPool ? [jointPoolName, ...owners] : owners;
 
   return (
@@ -387,7 +384,6 @@ export default function App() {
                 <div style={{display: 'flex', gap: '10px'}}>{!isMonthClosed ? (<button className="btn-close-books" onClick={openClosingModal}><CheckSquare size={16} /> Close Books</button>) : (<button className="btn-reopen-books" onClick={handleReopenBooks}><Unlock size={16} /> Re-open Books</button>)}<div className="view-toggle"><button className={dashboardMode === 'board' ? 'active' : ''} onClick={() => setDashboardMode('board')}><Kanban size={16}/> Board</button><button className={dashboardMode === 'charts' ? 'active' : ''} onClick={() => setDashboardMode('charts')}><PieChartIcon size={16}/> Charts</button></div><button className="btn-sync" onClick={handleSyncBlueprint} title="Pull updates from Master Blueprints"><RefreshCcw size={16} /> Sync</button><button className="btn-balance-all" onClick={handleBalanceEverything}><RefreshCw size={18} /> Balance All</button></div>
               </div>
               
-              {/* TOPOLOGY AWARE SUMMARY CARD */}
               <div className="split-summary-card" style={{width: '100%', boxSizing: 'border-box'}}>
                 {hasJointPool ? (
                   <>
@@ -410,14 +406,53 @@ export default function App() {
             ) : (
               <>
                 {savingsGoals.filter(g => g.totalPaid < g.target).length > 0 && (<div className="savings-widget"><h3 style={{marginTop: 0, fontSize: '1.1rem', color: 'var(--text-dim)'}}><Target size={16} style={{marginRight:6, verticalAlign: 'text-bottom'}}/> Active Savings & Repayments</h3><div className="savings-widget-grid">{savingsGoals.filter(g => g.totalPaid < g.target).map(goal => { const progress = Math.min(100, Math.round((goal.totalPaid / goal.target) * 100)); return ( <div key={goal.id} className="savings-mini-card"> <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}> <span style={{fontWeight: 600}}>{goal.name}</span> <button className="btn-add-quick" onClick={() => openExtraSavingsModal(goal)} title="Throw extra cash at this goal"><Plus size={14}/> Extra</button> </div> <div className="goal-progress-bar"><div className="goal-progress-fill" style={{width: `${progress}%`}}></div></div> <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)'}}><span>${goal.totalPaid} / ${goal.target}</span><span>{progress}%</span></div> </div> ) })}</div></div>)}
+                
+                {/* NEW HEADER FOR CLARITY */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, marginTop: 10 }}>
+                  <Wallet size={24} color="var(--green)" />
+                  <h2 style={{ margin: 0, fontSize: '1.3rem' }}>Income & Free Cash</h2>
+                </div>
+
                 <div className="income-grid">
                   {owners.map(owner => (
                     <div key={owner} className="person-income-card">
                       <div className="person-header"><div style={{display:'flex', alignItems:'center', gap:8}}><User size={18}/> {owner}</div><div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end'}}>{getPersonStats(owner).rollover !== 0 && (<span style={{fontSize: '0.75rem', color: getPersonStats(owner).rollover > 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600, marginBottom: 2}}>{getPersonStats(owner).rollover > 0 ? '+' : ''}${getPersonStats(owner).rollover.toFixed(0)} Rolled Over</span>)}<span className={`free-cash-badge ${getPersonStats(owner).totalFree < 0 ? 'neg' : 'pos'}`}>Total Free: ${getPersonStats(owner).totalFree.toFixed(0)}</span></div></div>
                       <div className="income-inputs">
-                        <div className="inp-group"><div style={{display: 'flex', justifyContent:'space-between', alignItems:'center'}}><label>Check 1</label><DayPicker value={currentIncomes[`${owner}_p1_date`]} onChange={(day) => handleIncomeChange(owner, 'p1_date', day)} /></div><input type="number" value={currentIncomes[`${owner}_p1`] || ''} placeholder="0" onChange={(e) => handleIncomeChange(owner, 'p1', e.target.value)} /><div className="stats-stack"><div className="mini-due">Due: -${getPersonStats(owner).due1.toFixed(0)}</div><div className={`mini-free ${getPersonStats(owner).free1 < 0 ? 'neg' : 'pos'}`}>Free: ${getPersonStats(owner).free1.toFixed(0)}</div></div></div>
-                        <div className="inp-group"><div style={{display: 'flex', justifyContent:'space-between', alignItems:'center'}}><label>Check 2</label><DayPicker value={currentIncomes[`${owner}_p2_date`]} onChange={(day) => handleIncomeChange(owner, 'p2_date', day)} /></div><input type="number" value={currentIncomes[`${owner}_p2`] || ''} placeholder="0" onChange={(e) => handleIncomeChange(owner, 'p2', e.target.value)} /><div className="stats-stack"><div className="mini-due">Due: -${getPersonStats(owner).due2.toFixed(0)}</div><div className={`mini-free ${getPersonStats(owner).free2 < 0 ? 'neg' : 'pos'}`}>Free: ${getPersonStats(owner).free2.toFixed(0)}</div></div></div>
-                        <div className="inp-group"><label style={{color: 'var(--accent)'}}>Extra</label><input type="number" style={{borderColor: 'var(--accent)'}} value={currentIncomes[`${owner}_extra`] || ''} placeholder="0" onChange={(e) => handleIncomeChange(owner, 'extra', e.target.value)} /><div className="stats-stack"><div className="mini-due">&nbsp;</div><div className={`mini-free ${getPersonStats(owner).incExtra < 0 ? 'neg' : 'pos'}`}>+ ${getPersonStats(owner).incExtra.toFixed(0)}</div></div></div>
+                        <div className="inp-group">
+                          <div style={{display: 'flex', justifyContent:'space-between', alignItems:'center'}}>
+                            <label>Check 1</label>
+                            <DayPicker value={currentIncomes[`${owner}_p1_date`]} onChange={(day) => handleIncomeChange(owner, 'p1_date', day)} />
+                          </div>
+                          {/* UPDATED DOLLAR SIGN WRAPPER */}
+                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <span style={{ position: 'absolute', left: 10, color: 'var(--text-dim)' }}>$</span>
+                            <input type="number" style={{ paddingLeft: 25, width: '100%', boxSizing: 'border-box' }} value={currentIncomes[`${owner}_p1`] || ''} placeholder="0" onChange={(e) => handleIncomeChange(owner, 'p1', e.target.value)} />
+                          </div>
+                          <div className="stats-stack"><div className="mini-due">Due: -${getPersonStats(owner).due1.toFixed(0)}</div><div className={`mini-free ${getPersonStats(owner).free1 < 0 ? 'neg' : 'pos'}`}>Free: ${getPersonStats(owner).free1.toFixed(0)}</div></div>
+                        </div>
+
+                        <div className="inp-group">
+                          <div style={{display: 'flex', justifyContent:'space-between', alignItems:'center'}}>
+                            <label>Check 2</label>
+                            <DayPicker value={currentIncomes[`${owner}_p2_date`]} onChange={(day) => handleIncomeChange(owner, 'p2_date', day)} />
+                          </div>
+                          {/* UPDATED DOLLAR SIGN WRAPPER */}
+                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <span style={{ position: 'absolute', left: 10, color: 'var(--text-dim)' }}>$</span>
+                            <input type="number" style={{ paddingLeft: 25, width: '100%', boxSizing: 'border-box' }} value={currentIncomes[`${owner}_p2`] || ''} placeholder="0" onChange={(e) => handleIncomeChange(owner, 'p2', e.target.value)} />
+                          </div>
+                          <div className="stats-stack"><div className="mini-due">Due: -${getPersonStats(owner).due2.toFixed(0)}</div><div className={`mini-free ${getPersonStats(owner).free2 < 0 ? 'neg' : 'pos'}`}>Free: ${getPersonStats(owner).free2.toFixed(0)}</div></div>
+                        </div>
+
+                        <div className="inp-group">
+                          <label style={{color: 'var(--accent)'}}>Extra</label>
+                          {/* UPDATED DOLLAR SIGN WRAPPER */}
+                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <span style={{ position: 'absolute', left: 10, color: 'var(--accent)' }}>$</span>
+                            <input type="number" style={{ paddingLeft: 25, width: '100%', boxSizing: 'border-box', borderColor: 'var(--accent)' }} value={currentIncomes[`${owner}_extra`] || ''} placeholder="0" onChange={(e) => handleIncomeChange(owner, 'extra', e.target.value)} />
+                          </div>
+                          <div className="stats-stack"><div className="mini-due">&nbsp;</div><div className={`mini-free ${getPersonStats(owner).incExtra < 0 ? 'neg' : 'pos'}`}>+ ${getPersonStats(owner).incExtra.toFixed(0)}</div></div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -458,29 +493,11 @@ export default function App() {
           </div>
         )}
         
-        {/* Pass allEntities down to sub-components instead of raw owners array */}
         {view === 'bills' && <RecurringBills bills={recurringBills} onAddBill={addRecurring} onEditBill={updateRecurring} onDeleteBill={deleteRecurring} owners={allEntities} categories={categories} />}
         {view === 'goals' && <SavingsManager goals={savingsGoals} onAddGoal={addGoal} onEditGoal={updateGoal} onDeleteGoal={deleteGoal} owners={allEntities} />}
         {view === 'forecast' && ( <div className="animate-fade-in"> <div className="month-selector"><button onClick={() => changeMonth(-1)}><ChevronLeft size={24}/></button><h2>{monthLabel}</h2><button onClick={() => changeMonth(1)}><ChevronRight size={24}/></button></div> {(() => { let totalRollover = 0; owners.forEach(owner => { totalRollover += getRollover(monthKey, owner); }); return <Forecast bills={currentBills} currentDate={currentDate} monthLabel={monthLabel} incomes={currentIncomes} owners={allEntities} rollover={totalRollover} />; })()} </div> )}
-        
-        {/* Fallback prop mapping to keep current Settings.jsx alive before we rewrite it */}
-        {view === 'settings' && (
-          <Settings 
-            currentTheme={theme} 
-            setTheme={setTheme} 
-            owners={owners} 
-            setOwners={setOwners} 
-            hasJointPool={hasJointPool} 
-            setHasJointPool={setHasJointPool}
-            jointPoolName={jointPoolName} 
-            setJointPoolName={setJointPoolName} 
-            appStartDate={appStartDate} 
-            startingBalances={startingBalances} 
-            setStartingBalances={setStartingBalances} 
-            categories={categories} 
-            setCategories={setCategories} 
-          />
-        )}      </main>
+        {view === 'settings' && <Settings currentTheme={theme} setTheme={setTheme} owners={owners} setOwners={setOwners} hasJointPool={hasJointPool} setHasJointPool={setHasJointPool} jointPoolName={jointPoolName} setJointPoolName={setJointPoolName} appStartDate={appStartDate} startingBalances={startingBalances} setStartingBalances={setStartingBalances} categories={categories} setCategories={setCategories} />}      
+      </main>
 
       {/* MODALS */}
       {isModalOpen && (<div className="modal-overlay"><div className="modal-card animate-fade-in"><div className="modal-header"><h3 style={{margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8}}>{modalType === 'onetime' ? <Plus size={20}/> : <Target size={20}/>} {modalType === 'onetime' ? 'Add One-Time Bill' : 'Throw Extra Cash'}</h3><button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button></div><form onSubmit={handleModalSubmit} className="add-bill-form"><p className="subtitle" style={{marginBottom: 20, marginTop: 0}}>{modalType === 'onetime' ? `Adding to ${modalData.owner}'s check.` : `How much extra are you putting towards ${modalData.name.replace('Extra: ', '')}?`}</p>{modalType === 'onetime' && (<input autoFocus className="input-field" placeholder="What is the expense?" value={modalData.name} onChange={(e) => setModalData({ ...modalData, name: e.target.value })} />)}<div className="form-row"><input type="number" autoFocus={modalType !== 'onetime'} className="input-field" placeholder="Amount ($)" value={modalData.amount} onChange={(e) => setModalData({ ...modalData, amount: e.target.value })} /><select className="input-field" value={modalData.columnId} onChange={(e) => setModalData({ ...modalData, columnId: e.target.value })}><option value="pay1">From Paycheck 1</option><option value="pay2">From Paycheck 2</option></select></div>{modalType === 'onetime' && (<div style={{marginTop: 10}}><select className="input-field" value={modalData.category} onChange={e => setModalData({...modalData, category: e.target.value})}>{Object.entries(categories).map(([key, cat]) => (<option key={key} value={key}>{cat.label}</option>))}</select></div>)}<div className="form-actions" style={{justifyContent: 'flex-end', marginTop: 15}}><button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="btn-primary">{modalType === 'onetime' ? 'Add Expense' : 'Add Payment'}</button></div></form></div></div>)}
