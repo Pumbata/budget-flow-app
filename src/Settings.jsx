@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Moon, Sun, UserPlus, Trash2, Tags, Plus, Coffee, Home, Users, Download, Upload } from 'lucide-react';
+import { Moon, Sun, UserPlus, Trash2, Tags, Plus, Coffee, Home, Users, Download, Upload, PlayCircle } from 'lucide-react';
 
 export default function Settings({ 
   currentTheme, setTheme, 
@@ -11,7 +11,8 @@ export default function Settings({
   categories, setCategories,
   recurringBills, setRecurringBills,
   savingsGoals, setSavingsGoals,
-  monthlyData, setMonthlyData
+  monthlyData, setMonthlyData,
+  onReplayTour
 }) {
   const [newOwnerName, setNewOwnerName] = useState('');
   const [newCatName, setNewCatName] = useState('');
@@ -101,7 +102,6 @@ export default function Settings({
         alert("Error reading backup file. Please make sure it is a valid OmegaBudget .json file.");
         console.error(err);
       }
-      // Reset input so they can upload the same file again if needed
       e.target.value = null; 
     };
     reader.readAsText(file);
@@ -117,6 +117,18 @@ export default function Settings({
       </header>
 
       <div className="settings-grid">
+        
+        {/* HELP & TUTORIALS */}
+        <div className="card settings-card" style={{ borderLeft: '4px solid var(--accent)' }}>
+          <h3><PlayCircle size={18} style={{verticalAlign: 'text-bottom', marginRight: 8}}/> Help & Tutorials</h3>
+          <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: 15, lineHeight: 1.4 }}>
+            Need a quick refresher on how the dashboard works? You can restart the interactive guided tour at any time to walk through the basics of balancing your budget.
+          </p>
+          <button className="btn-primary" onClick={onReplayTour} style={{ display: 'inline-flex' }}>
+            <PlayCircle size={18} /> Replay Guided Tour
+          </button>
+        </div>
+
         {/* APPEARANCE */}
         <div className="card settings-card">
           <h3>Appearance</h3>
