@@ -44,7 +44,8 @@ export default function RecurringBills({ bills, onAddBill, onEditBill, onDeleteB
           <h1 style={{fontSize: '1.5rem'}}>Recurring Bills Blueprint</h1>
           <p className="subtitle">Manage your master list of monthly expenses.</p>
         </div>
-        <button className="btn-primary" onClick={() => setIsAdding(true)}><Plus size={18} /> Add Bill</button>
+        {/* ADDED TARGET CLASS: tour-add-bill */}
+        <button className="btn-primary tour-add-bill" onClick={() => setIsAdding(true)}><Plus size={18} /> Add Bill</button>
       </header>
 
       {/* ADD BILL FORM */}
@@ -76,7 +77,8 @@ export default function RecurringBills({ bills, onAddBill, onEditBill, onDeleteB
       )}
 
       {/* BILLS LIST GROUPED BY OWNER */}
-      <div className="bills-container">
+      {/* ADDED TARGET CLASS: tour-blueprint-list */}
+      <div className="bills-container tour-blueprint-list">
         {owners.map(owner => {
           const ownerBills = bills.filter(b => b.owner === owner).sort((a,b) => a.dueDate - b.dueDate);
           if (ownerBills.length === 0) return null;

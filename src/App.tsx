@@ -38,9 +38,10 @@ export default function App() {
   const [cashFlowFilter, setCashFlowFilter] = useState('All');
   const [showOnboarding, setShowOnboarding] = useState(false);
   
-  // --- Guided Tour State ---
+  // --- Guided Tour State (UPDATED) ---
   const [runTour, setRunTour] = useState(false);
-  const [hasSeenTour, setHasSeenTour] = useState(true); // Default to true while loading
+  const [hasSeenTour, setHasSeenTour] = useState(true); 
+  const [tourStepIndex, setTourStepIndex] = useState(0); // WE CONTROL THIS NOW
   
   // --- Data State (NEW TOPOLOGY) ---
   const [theme, setTheme] = useState('dark');
@@ -109,7 +110,6 @@ export default function App() {
         if (data.app_start_date) setAppStartDate(data.app_start_date);
         if (data.theme) setTheme(data.theme);
         
-        // Check if they need the tour
         if (data.has_seen_tour) {
           setHasSeenTour(true);
         } else {
@@ -118,7 +118,7 @@ export default function App() {
         }
       } else {
         setAppStartDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`);
-        setHasSeenTour(false); // Brand new user, queue up the tour
+        setHasSeenTour(false);
         setShowOnboarding(true);
       }
     } catch (err) {
@@ -143,7 +143,7 @@ export default function App() {
         starting_balances: startingBalances,
         app_start_date: appStartDate,
         theme,
-        has_seen_tour: hasSeenTour, // Sync tour status
+        has_seen_tour: hasSeenTour, 
         updated_at: new Date()
       };
       const { error } = await supabase.from('user_state').upsert(updates);
@@ -330,8 +330,11 @@ export default function App() {
     setRecurringBills(finalBills);
     setShowOnboarding(false);
     
-    // Trigger the tour for new users right after onboarding finishes
-    if (!hasSeenTour) setRunTour(true);
+    // Trigger the tour
+    if (!hasSeenTour) {
+      setTourStepIndex(0);
+      setRunTour(true);
+    }
   };
   
   const handleUpdatePassword = async (e) => {
@@ -340,37 +343,52 @@ export default function App() {
     if (error) { alert(error.message); } else { alert("Password updated successfully!"); setIsRecoveringPassword(false); loadUserData(session.user.id); }
   };
 
-  // --- JOYRIDE TOUR SETUP ---
+  // --- JOYRIDE TOUR SETUP (MULTI-PAGE) ---
   const tourSteps = [
-    {
-      target: '.tour-income',
-      content: "Welcome to your command center! Start by entering your expected paychecks here. As you add income, your 'Total Free' cash will calculate automatically.",
-      disableBeacon: true,
-      placement: 'bottom'
-    },
-    {
-      target: '.tour-board',
-      content: "This is your financial Kanban board. Drag and drop your bills between Paycheck 1 and Paycheck 2 to visually balance your cash flow.",
-      placement: 'top'
-    },
-    {
-      target: '.tour-balance-all',
-      content: "Don't want to drag and drop manually? Click 'Balance All' and OmegaBudget's engine will instantly sort your bills to maximize your free cash.",
-      placement: 'bottom'
-    },
-    {
-      target: '.tour-close-books',
-      content: "At the end of the month, click here to 'Close Books'. You'll confirm your actual bank balance, and any extra money rolls over into next month!",
-      placement: 'bottom'
-    }
+    { target: '.tour-income', content: "Welcome to your command center! Start by entering your expected paychecks here. As you add income, your 'Total Free' cash will calculate automatically.", disableBeacon: true, placement: 'bottom' },
+    { target: '.tour-board', content: "This is your financial Kanban board. Drag and drop your bills between Paycheck 1 and Paycheck 2 to visually balance your cash flow.", placement: 'top' },
+    { target: '.tour-balance-all', content: "Don't want to drag and drop manually? Click 'Balance All' and OmegaBudget's engine will instantly sort your bills to maximize your free cash.", placement: 'bottom' },
+    { target: '.tour-close-books', content: "At the end of the month, click here to 'Close Books'. You'll confirm your actual bank balance, and any extra money rolls over into next month!", placement: 'bottom' },
+    { target: '.tour-sync', content: "Got new regular expenses? The 'Sync' button pulls fresh master bills straight into your current month.", placement: 'bottom' },
+    { target: '.tour-nav-bills', content: "Speaking of your master list, let's head over to the Recurring Bills tab to set that up.", placement: 'right' },
+    // -- VIEW SWITCHES TO 'BILLS' HERE --
+    { target: '.tour-add-bill', content: "Welcome to the Blueprint! Click 'Add Bill' to input all your standard monthly expenses.", placement: 'bottom' },
+    { target: '.tour-blueprint-list', content: "Once added, they live here forever. Your dashboard will copy these every single month so you never have to type them twice. You're all set!", placement: 'top' }
   ];
 
   const handleJoyrideCallback = (data) => {
-    const { status } = data;
+    const { action, index, status, type } = data;
+
+    // Reacting to a step changing
+    if (type === 'step:after') {
+      if (action === 'next' || action === 'close') {
+        // If they just finished Step 5 (Sidebar link to Recurring Bills)
+        if (index === 5) {
+          setView('bills'); // Change the React state to show the new page
+          // Wait 100ms for the DOM to render the new page before firing the next tour step
+          setTimeout(() => setTourStepIndex(index + 1), 100);
+        } else {
+          setTourStepIndex(index + 1); // Normal next step
+        }
+      } 
+      else if (action === 'prev') {
+        // If they click 'Back' while on the first step of the Bills page
+        if (index === 6) {
+          setView('dashboard');
+          setTimeout(() => setTourStepIndex(index - 1), 100);
+        } else {
+          setTourStepIndex(index - 1);
+        }
+      }
+    }
+
+    // When the tour is totally done or skipped
     const finishedStatuses = [STATUS.FINISHED, STATUS.SKIPPED];
     if (finishedStatuses.includes(status)) {
       setRunTour(false);
-      setHasSeenTour(true); // Save to cloud that they completed it
+      setHasSeenTour(true);
+      setTourStepIndex(0); // Reset for the next time they hit "Replay"
+      setView('dashboard'); // Teleport them back home
     }
   };
 
@@ -413,6 +431,7 @@ export default function App() {
       <Joyride
         steps={tourSteps}
         run={runTour}
+        stepIndex={tourStepIndex} /* THIS IS NEW - IT LETS US CONTROL THE PAUSING/PLAYING */
         continuous={true}
         showSkipButton={true}
         showProgress={true}
@@ -435,7 +454,8 @@ export default function App() {
         <div className="logo"><img src="/logo.png" alt="OmegaBudget Logo" style={{ width: '28px', height: '28px' }} /><span>OmegaBudget</span></div>
         <button className={`nav-item ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}><LayoutDashboard size={20} /> Dashboard</button>
         <button className={`nav-item ${view === 'forecast' ? 'active' : ''}`} onClick={() => setView('forecast')}><CalendarClock size={20} /> Forecast</button>
-        <button className={`nav-item ${view === 'bills' ? 'active' : ''}`} onClick={() => setView('bills')}><Receipt size={20} /> Recurring Bills</button>
+        {/* ADDED TARGET CLASS: tour-nav-bills */}
+        <button className={`nav-item tour-nav-bills ${view === 'bills' ? 'active' : ''}`} onClick={() => setView('bills')}><Receipt size={20} /> Recurring Bills</button>
         <button className={`nav-item ${view === 'goals' ? 'active' : ''}`} onClick={() => setView('goals')}><Target size={20} /> Savings Goals</button>
         <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}><SettingsIcon size={20} /> Settings</button>
         <button className="nav-item" onClick={handleSignOut} style={{marginTop: 'auto', color: 'var(--red)'}}><LogOut size={20} /> Sign Out</button>
@@ -449,12 +469,11 @@ export default function App() {
               <div style={{width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <div><h1 style={{fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 10}}>Budget Snapshot{isMonthClosed && <span className="closed-badge"><Lock size={12}/> Closed</span>}</h1><p className="subtitle">Managing {monthLabel}</p></div>
                 <div style={{display: 'flex', gap: '10px'}}>
-                  {/* ADDED TARGET CLASS: tour-close-books */}
                   {!isMonthClosed ? (<button className="btn-close-books tour-close-books" onClick={openClosingModal}><CheckSquare size={16} /> Close Books</button>) : (<button className="btn-reopen-books" onClick={handleReopenBooks}><Unlock size={16} /> Re-open Books</button>)}
                   <div className="view-toggle"><button className={dashboardMode === 'board' ? 'active' : ''} onClick={() => setDashboardMode('board')}><Kanban size={16}/> Board</button><button className={dashboardMode === 'charts' ? 'active' : ''} onClick={() => setDashboardMode('charts')}><PieChartIcon size={16}/> Charts</button></div>
-                  <button className="btn-sync" onClick={handleSyncBlueprint} title="Pull updates from Master Blueprints"><RefreshCcw size={16} /> Sync</button>
                   
-                  {/* ADDED TARGET CLASS: tour-balance-all */}
+                  {/* ADDED TARGET CLASS: tour-sync */}
+                  <button className="btn-sync tour-sync" onClick={handleSyncBlueprint} title="Pull updates from Master Blueprints"><RefreshCcw size={16} /> Sync</button>
                   <button className="btn-balance-all tour-balance-all" onClick={handleBalanceEverything}><RefreshCw size={18} /> Balance All</button>
                 </div>
               </div>
@@ -482,7 +501,6 @@ export default function App() {
               <>
                 {savingsGoals.filter(g => g.totalPaid < g.target).length > 0 && (<div className="savings-widget"><h3 style={{marginTop: 0, fontSize: '1.1rem', color: 'var(--text-dim)'}}><Target size={16} style={{marginRight:6, verticalAlign: 'text-bottom'}}/> Active Savings & Repayments</h3><div className="savings-widget-grid">{savingsGoals.filter(g => g.totalPaid < g.target).map(goal => { const progress = Math.min(100, Math.round((goal.totalPaid / goal.target) * 100)); return ( <div key={goal.id} className="savings-mini-card"> <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}> <span style={{fontWeight: 600}}>{goal.name}</span> <button className="btn-add-quick" onClick={() => openExtraSavingsModal(goal)} title="Throw extra cash at this goal"><Plus size={14}/> Extra</button> </div> <div className="goal-progress-bar"><div className="goal-progress-fill" style={{width: `${progress}%`}}></div></div> <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)'}}><span>${goal.totalPaid} / ${goal.target}</span><span>{progress}%</span></div> </div> ) })}</div></div>)}
                 
-                {/* ADDED TARGET CLASS: tour-income */}
                 <div className="tour-income">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, marginTop: 10 }}>
                     <Wallet size={24} color="var(--green)" />
@@ -519,7 +537,6 @@ export default function App() {
                 
                 <ChecklistWidget title={`${monthLabel} Overview`} todos={currentTodos.filter(t => !t.columnId || t.columnId === 'global')} onAdd={(text) => handleAddTodo(text, hasJointPool ? jointPoolName : owners[0], 'global')} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} variant="global" />
                 
-                {/* ADDED TARGET CLASS: tour-board */}
                 <div className="tour-board">
                   <DragDropContext onDragEnd={onDragEnd}>
                     {hasJointPool && (
@@ -548,7 +565,8 @@ export default function App() {
         {view === 'bills' && <RecurringBills bills={recurringBills} onAddBill={addRecurring} onEditBill={updateRecurring} onDeleteBill={deleteRecurring} owners={allEntities} categories={categories} />}
         {view === 'goals' && <SavingsManager goals={savingsGoals} onAddGoal={addGoal} onEditGoal={updateGoal} onDeleteGoal={deleteGoal} owners={allEntities} />}
         {view === 'forecast' && ( <div className="animate-fade-in"> <div className="month-selector"><button onClick={() => changeMonth(-1)}><ChevronLeft size={24}/></button><h2>{monthLabel}</h2><button onClick={() => changeMonth(1)}><ChevronRight size={24}/></button></div> {(() => { let totalRollover = 0; owners.forEach(owner => { totalRollover += getRollover(monthKey, owner); }); return <Forecast bills={currentBills} currentDate={currentDate} monthLabel={monthLabel} incomes={currentIncomes} owners={allEntities} rollover={totalRollover} />; })()} </div> )}
-        {view === 'settings' && <Settings currentTheme={theme} setTheme={setTheme} owners={owners} setOwners={setOwners} hasJointPool={hasJointPool} setHasJointPool={setHasJointPool} jointPoolName={jointPoolName} setJointPoolName={setJointPoolName} appStartDate={appStartDate} startingBalances={startingBalances} setStartingBalances={setStartingBalances} categories={categories} setCategories={setCategories} recurringBills={recurringBills} setRecurringBills={setRecurringBills} savingsGoals={savingsGoals} setSavingsGoals={setSavingsGoals} monthlyData={monthlyData} setMonthlyData={setMonthlyData} onReplayTour={() => { setHasSeenTour(false); setRunTour(true); setView('dashboard'); }} />}      </main>
+        {view === 'settings' && <Settings currentTheme={theme} setTheme={setTheme} owners={owners} setOwners={setOwners} hasJointPool={hasJointPool} setHasJointPool={setHasJointPool} jointPoolName={jointPoolName} setJointPoolName={setJointPoolName} appStartDate={appStartDate} startingBalances={startingBalances} setStartingBalances={setStartingBalances} categories={categories} setCategories={setCategories} recurringBills={recurringBills} setRecurringBills={setRecurringBills} savingsGoals={savingsGoals} setSavingsGoals={setSavingsGoals} monthlyData={monthlyData} setMonthlyData={setMonthlyData} onReplayTour={() => { setTourStepIndex(0); setHasSeenTour(false); setRunTour(true); setView('dashboard'); }} />}      
+      </main>
 
       {/* MODALS */}
       {isModalOpen && (<div className="modal-overlay"><div className="modal-card animate-fade-in"><div className="modal-header"><h3 style={{margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8}}>{modalType === 'onetime' ? <Plus size={20}/> : <Target size={20}/>} {modalType === 'onetime' ? 'Add One-Time Bill' : 'Throw Extra Cash'}</h3><button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button></div><form onSubmit={handleModalSubmit} className="add-bill-form"><p className="subtitle" style={{marginBottom: 20, marginTop: 0}}>{modalType === 'onetime' ? `Adding to ${modalData.owner}'s check.` : `How much extra are you putting towards ${modalData.name.replace('Extra: ', '')}?`}</p>{modalType === 'onetime' && (<input autoFocus className="input-field" placeholder="What is the expense?" value={modalData.name} onChange={(e) => setModalData({ ...modalData, name: e.target.value })} />)}<div className="form-row"><input type="number" autoFocus={modalType !== 'onetime'} className="input-field" placeholder="Amount ($)" value={modalData.amount} onChange={(e) => setModalData({ ...modalData, amount: e.target.value })} /><select className="input-field" value={modalData.columnId} onChange={(e) => setModalData({ ...modalData, columnId: e.target.value })}><option value="pay1">From Paycheck 1</option><option value="pay2">From Paycheck 2</option></select></div>{modalType === 'onetime' && (<div style={{marginTop: 10}}><select className="input-field" value={modalData.category} onChange={e => setModalData({...modalData, category: e.target.value})}>{Object.entries(categories).map(([key, cat]) => (<option key={key} value={key}>{cat.label}</option>))}</select></div>)}<div className="form-actions" style={{justifyContent: 'flex-end', marginTop: 15}}><button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="btn-primary">{modalType === 'onetime' ? 'Add Expense' : 'Add Payment'}</button></div></form></div></div>)}
