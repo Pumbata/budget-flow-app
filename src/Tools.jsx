@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Calculator, Plus, Trash2, TrendingUp, DollarSign, Calendar, Zap, PieChart as PieIcon } from 'lucide-react';
+import { Calculator, Plus, Trash2, TrendingUp, DollarSign, Calendar, Zap, PieChart as PieIcon, Clock, Briefcase } from 'lucide-react';
 
 export default function Tools() {
-  const [activeTool, setActiveTool] = useState('debt'); // 'debt' or 'invest'
+  const [activeTool, setActiveTool] = useState('debt'); // 'debt', 'invest', or 'time'
 
-  // --- DEBT STATE ---
+  // ==========================================
+  // 1. DEBT STATE & LOGIC
+  // ==========================================
   const [debts, setDebts] = useState([
     { id: 1, name: 'Visa Card', balance: 5000, rate: 24.99, minPayment: 150 },
     { id: 2, name: 'Car Loan', balance: 12000, rate: 6.5, minPayment: 350 }
@@ -14,15 +16,6 @@ export default function Tools() {
   const [extraPayment, setExtraPayment] = useState(100);
   const [strategy, setStrategy] = useState('avalanche');
 
-  // --- INVESTMENT STATE ---
-  const [investForm, setInvestForm] = useState({
-    initial: 1000,
-    monthly: 500,
-    rate: 8, // Standard S&P 500 adjusted for inflation
-    years: 30
-  });
-
-  // --- DEBT ACTIONS ---
   const handleAddDebt = (e) => {
     e.preventDefault();
     if (!newDebt.name || !newDebt.balance) return;
@@ -35,7 +28,6 @@ export default function Tools() {
   };
   const handleDeleteDebt = (id) => setDebts(debts.filter(d => d.id !== id));
 
-  // --- DEBT SIMULATION ENGINE ---
   const debtSimulation = useMemo(() => {
     if (debts.length === 0) return null;
     const runScenario = (isAccelerated) => {
@@ -88,7 +80,16 @@ export default function Tools() {
     return { name: point.date, Baseline: point.balance, Accelerated: accPoint ? accPoint.balance : 0 };
   }) : [];
 
-  // --- INVESTMENT SIMULATION ENGINE ---
+  // ==========================================
+  // 2. MILLIONAIRE MATH STATE & LOGIC
+  // ==========================================
+  const [investForm, setInvestForm] = useState({
+    initial: 1000,
+    monthly: 500,
+    rate: 8, 
+    years: 30
+  });
+
   const investSimulation = useMemo(() => {
     const months = investForm.years * 12;
     const monthlyRate = investForm.rate / 100 / 12;
@@ -100,7 +101,7 @@ export default function Tools() {
       balance = (balance + investForm.monthly) * (1 + monthlyRate);
       totalPrincipal += investForm.monthly;
 
-      if (i % 12 === 0) { // Only log once a year to keep chart clean
+      if (i % 12 === 0) { 
         data.push({
           year: `Year ${i / 12}`,
           Principal: totalPrincipal,
@@ -111,6 +112,34 @@ export default function Tools() {
     }
     return { data, finalBalance: balance, totalPrincipal, totalInterest: balance - totalPrincipal };
   }, [investForm]);
+
+  // ==========================================
+  // 3. TIME COST CALCULATOR STATE & LOGIC
+  // ==========================================
+  const [timeForm, setTimeForm] = useState({
+    incomeType: 'hourly', // 'hourly' or 'salary'
+    incomeAmount: 25,
+    itemName: 'New Phone',
+    itemCost: 1000
+  });
+
+  const timeResults = useMemo(() => {
+    let hourlyRate = 0;
+    if (timeForm.incomeType === 'hourly') {
+      hourlyRate = parseFloat(timeForm.incomeAmount);
+    } else {
+      // Assuming 40hr work week, 52 weeks
+      hourlyRate = parseFloat(timeForm.incomeAmount) / 2080;
+    }
+
+    if (!hourlyRate || hourlyRate <= 0) return { hours: 0, days: 0 };
+
+    const hours = parseFloat(timeForm.itemCost) / hourlyRate;
+    const days = hours / 8; // Assuming 8hr work day
+
+    return { hours, days, hourlyRate };
+  }, [timeForm]);
+
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: 60 }}>
@@ -127,6 +156,7 @@ export default function Tools() {
       <div className="tool-tabs" style={{ marginBottom: 20 }}>
         <button className={`tool-tab ${activeTool === 'debt' ? 'active' : ''}`} onClick={() => setActiveTool('debt')}>Debt Destroyer 📉</button>
         <button className={`tool-tab ${activeTool === 'invest' ? 'active' : ''}`} onClick={() => setActiveTool('invest')}>Millionaire Math 📈</button>
+        <button className={`tool-tab ${activeTool === 'time' ? 'active' : ''}`} onClick={() => setActiveTool('time')}>Is It Worth It? ⏳</button>
       </div>
 
       {/* ========================================== */}
@@ -298,6 +328,76 @@ export default function Tools() {
           </div>
         </div>
       )}
+
+      {/* ========================================== */}
+      {/* TIME COST CALCULATOR VIEW                  */}
+      {/* ========================================== */}
+      {activeTool === 'time' && (
+        <div className="tools-grid-layout">
+          <div className="inputs-column">
+            <div className="card tool-card">
+              <h3>Your Income</h3>
+              <div className="control-group">
+                <label>Income Type</label>
+                <div className="strategy-toggle">
+                  <button className={timeForm.incomeType === 'hourly' ? 'active' : ''} onClick={() => setTimeForm({...timeForm, incomeType: 'hourly'})}>Hourly Wage</button>
+                  <button className={timeForm.incomeType === 'salary' ? 'active' : ''} onClick={() => setTimeForm({...timeForm, incomeType: 'salary'})}>Annual Salary</button>
+                </div>
+              </div>
+              <div className="control-group">
+                <label>{timeForm.incomeType === 'hourly' ? 'Hourly Rate ($)' : 'Annual Salary ($)'}</label>
+                <input type="number" className="input-field" value={timeForm.incomeAmount} onChange={e => setTimeForm({...timeForm, incomeAmount: e.target.value})} />
+                {timeForm.incomeType === 'salary' && (
+                  <p className="strategy-desc" style={{marginTop: 5}}>
+                    Calculated Rate: <strong style={{color: 'var(--accent)'}}>${(parseFloat(timeForm.incomeAmount) / 2080).toFixed(2)}/hr</strong>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="card tool-card">
+              <h3>The Expense</h3>
+              <div className="control-group">
+                <label>Item Name</label>
+                <input type="text" className="input-field" placeholder="e.g. New iPhone" value={timeForm.itemName} onChange={e => setTimeForm({...timeForm, itemName: e.target.value})} />
+              </div>
+              <div className="control-group">
+                <label>Total Cost ($)</label>
+                <input type="number" className="input-field" placeholder="1000" value={timeForm.itemCost} onChange={e => setTimeForm({...timeForm, itemCost: e.target.value})} />
+              </div>
+            </div>
+          </div>
+
+          <div className="results-column">
+             {/* RESULTS HERO CARD */}
+             <div className="card tool-card" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, textAlign: 'center'}}>
+                <Clock size={48} color="var(--accent)" style={{marginBottom: 20}}/>
+                <h3 style={{fontSize: '1.2rem', margin: '0 0 10px 0', color: 'var(--text-dim)'}}>That {timeForm.itemName || 'item'} will cost you</h3>
+                
+                <div style={{fontSize: '3.5rem', fontWeight: 800, lineHeight: 1, marginBottom: 10, color: 'var(--text)'}}>
+                  {timeResults.hours.toFixed(1)} <span style={{fontSize: '1.5rem', color: 'var(--text-dim)'}}>Hours</span>
+                </div>
+                
+                <div style={{fontSize: '1.1rem', color: 'var(--text-dim)', marginBottom: 30}}>
+                  of your life spent working.
+                </div>
+
+                <div style={{display: 'flex', gap: 15, background: 'var(--bg)', padding: '15px 25px', borderRadius: 12, border: '1px solid var(--border)'}}>
+                   <div style={{display: 'flex', flexDirection: 'column'}}>
+                     <span style={{fontSize: '0.8rem', color: 'var(--text-dim)'}}>WORK DAYS</span>
+                     <span style={{fontSize: '1.4rem', fontWeight: 700}}>{timeResults.days.toFixed(1)}</span>
+                   </div>
+                   <div style={{width: 1, background: 'var(--border)'}}></div>
+                   <div style={{display: 'flex', flexDirection: 'column'}}>
+                     <span style={{fontSize: '0.8rem', color: 'var(--text-dim)'}}>WORK WEEKS</span>
+                     <span style={{fontSize: '1.4rem', fontWeight: 700}}>{(timeResults.days / 5).toFixed(1)}</span>
+                   </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
