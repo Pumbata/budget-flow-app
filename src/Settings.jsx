@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Moon, Sun, UserPlus, Trash2, Tags, Plus, Coffee, Home, Users, Download, Upload, PlayCircle } from 'lucide-react';
+import { Moon, Sun, UserPlus, Trash2, Tags, Plus, Coffee, Home, Users, Download, Upload, PlayCircle, Lock } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 export default function Settings({ 
   currentTheme, setTheme, 
@@ -17,6 +18,8 @@ export default function Settings({
   const [newOwnerName, setNewOwnerName] = useState('');
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState('#6366f1');
+  const [newPassword, setNewPassword] = useState('');
+  const [isUpdatingAuth, setIsUpdatingAuth] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleAddOwner = (e) => {
@@ -49,6 +52,25 @@ export default function Settings({
     const newCats = { ...categories };
     delete newCats[catId];
     setCategories(newCats);
+  };
+
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsUpdatingAuth(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsUpdatingAuth(false);
+
+    if (error) {
+      alert("Error updating password: " + error.message);
+    } else {
+      alert("Password updated successfully!");
+      setNewPassword('');
+    }
   };
 
   // --- EXPORT DATA ---
@@ -206,6 +228,27 @@ export default function Settings({
             <input type="color" className="color-picker-input" value={newCatColor} onChange={e => setNewCatColor(e.target.value)} />
             <input type="text" className="input-field" placeholder="New Category Name" value={newCatName} onChange={e => setNewCatName(e.target.value)} />
             <button type="submit" className="btn-primary"><Plus size={16}/></button>
+          </form>
+        </div>
+
+        {/* ACCOUNT SECURITY - NEW */}
+        <div className="card settings-card">
+          <h3><Lock size={18} style={{verticalAlign: 'text-bottom', marginRight: 8}}/> Account Security</h3>
+          <form onSubmit={handleUpdatePassword} style={{ marginTop: 15 }}>
+            <div className="form-group" style={{ marginBottom: 15 }}>
+              <label style={{ display: 'block', marginBottom: 8, fontSize: '0.9rem', color: 'var(--text-dim)' }}>Change Password</label>
+              <input 
+                type="password" 
+                className="input-field" 
+                placeholder="New Password" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                style={{ width: '100%', maxWidth: '300px' }}
+              />
+            </div>
+            <button type="submit" className="btn-primary" disabled={isUpdatingAuth}>
+              {isUpdatingAuth ? 'Updating...' : 'Update Password'}
+            </button>
           </form>
         </div>
 
