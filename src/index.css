@@ -2345,3 +2345,33 @@ h1 { margin: 0; font-size: 2rem; }
 }
 
 
+/* --- VIEW TOGGLE --- */
+/* (Reusing the same style class from Dashboard, but ensuring it overrides any specifics) */
+.view-toggle button {
+  white-space: nowrap;
+}
+
+/* --- TRENDS TABLE --- */
+.trend-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+
+.trend-val {
+  font-weight: 600;
+  text-align: right;
+}
+
+.trend-diff {
+  font-weight: 700;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+
