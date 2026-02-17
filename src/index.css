@@ -2375,3 +2375,199 @@ h1 { margin: 0; font-size: 2rem; }
 }
 
 
+/* --- TOOLS & SIMULATIONS --- */
+
+.tool-tabs {
+  display: flex;
+  gap: 15px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.tool-tab {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.tool-tab.active {
+  background: var(--card);
+  color: var(--accent);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.tools-grid-layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 30px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .tools-grid-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inputs-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.results-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Debt List Inputs */
+.debt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.debt-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.debt-name { font-weight: 600; font-size: 0.95rem; }
+.debt-sub { font-size: 0.75rem; color: var(--text-dim); }
+.debt-bal { font-weight: 700; color: var(--red); margin-right: 10px; }
+
+.add-debt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.add-debt-form input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 10px;
+  border-radius: 6px;
+  color: var(--text);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.split-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Strategy Controls */
+.control-group {
+  margin-bottom: 20px;
+}
+
+.control-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.highlight-val { color: var(--accent); }
+
+.slider {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.strategy-toggle {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 8px;
+}
+
+.strategy-toggle button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.strategy-toggle button.active {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.strategy-desc {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Sim Results Stats */
+.sim-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.sim-stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.sim-stat-card.success { border-color: var(--green); background: rgba(34, 197, 94, 0.05); }
+
+.sim-stat-card .icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.sim-stat-card .label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 4px; }
+.sim-stat-card .value { font-size: 1.4rem; font-weight: 800; display: block; line-height: 1; margin-bottom: 4px; color: var(--text); }
+.sim-stat-card .sub { font-size: 0.8rem; color: var(--green); font-weight: 600; }
+
