@@ -15,6 +15,7 @@ import Landing from './Landing';
 import Onboarding from './Onboarding';
 import Reports from './Reports';
 import Tools from './Tools';
+import { Calculator, LayoutDashboard, Receipt, Wallet, RefreshCw, RefreshCcw, Users, User, Settings as SettingsIcon, ChevronLeft, ChevronRight, CheckCircle2, Circle, Trash2, Plus, X, Target, PieChart as PieIcon, Kanban, Filter, Maximize2, CheckSquare, CalendarClock, Calendar as CalendarIcon, ChevronDown, Layers, Tag, Home, Car, Zap, CreditCard, Smile, ShoppingBag, Activity, HelpCircle, Landmark, Lock, Unlock, LogOut, Loader2, TrendingUp, TrendingDown, DollarSign, List, ArrowRight, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 
 // --- CONSTANTS & HELPERS ---
