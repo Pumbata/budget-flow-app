@@ -64,7 +64,10 @@ export default function Reports({ monthlyData, owners, categories, savingsGoals 
     color: categories[key]?.color || '#94a3b8'
   })).sort((a, b) => b.value - a.value);
 
-  const monthLabel = new Date(selectedMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' });
+// Fix: Parse manually to avoid UTC timezone rollback
+const [rptYear, rptMonth] = selectedMonth.split('-').map(Number);
+const monthLabel = new Date(rptYear, rptMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+
 
   // --- PROFESSIONAL PDF GENERATOR ---
   const handleDownloadPDF = () => {
