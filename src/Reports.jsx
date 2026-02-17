@@ -1,11 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, PieChart as PieIcon, Activity, Calendar, Download, AlertCircle, CheckCircle2, List } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, PieChart as PieIcon, Activity, Calendar, Download, AlertCircle, CheckCircle2, List, Loader2 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 export default function Reports({ monthlyData, owners, categories, savingsGoals, recurringBills }) {
   // Default to the most recent month with data, or current month
   const availableMonths = Object.keys(monthlyData).sort().reverse();
   const [selectedMonth, setSelectedMonth] = useState(availableMonths[0] || new Date().toISOString().slice(0, 7));
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const reportRef = useRef(null); // The target we want to print
 
   // --- MATH ENGINE ---
   const reportData = useMemo(() => {
@@ -28,7 +32,7 @@ export default function Reports({ monthlyData, owners, categories, savingsGoals,
     let fixedCosts = 0; // Needs
     let flexibleCosts = 0; // Wants
     
-    // New: Itemized Lists
+    // Itemized Lists
     const needsItems = [];
     const wantsItems = [];
 
@@ -49,7 +53,7 @@ export default function Reports({ monthlyData, owners, categories, savingsGoals,
       }
     });
 
-    // Sort itemized lists by amount (Highest first)
+    // Sort itemized lists by amount
     needsItems.sort((a, b) => b.amount - a.amount);
     wantsItems.sort((a, b) => b.amount - a.amount);
 
@@ -73,6 +77,38 @@ export default function Reports({ monthlyData, owners, categories, savingsGoals,
 
   const monthLabel = new Date(selectedMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' });
 
+  // --- PDF GENERATION ---
+  const handleDownloadPDF = async () => {
+    if (!reportRef.current) return;
+    setIsGeneratingPdf(true);
+
+    try {
+      // 1. Capture the DOM element as a high-res canvas
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2, // Boosts resolution for crisp text
+        backgroundColor: null, // Transparent background (uses CSS background)
+        ignoreElements: (element) => element.classList.contains('no-print') // Ignore buttons if marked
+      });
+
+      // 2. Initialize PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4'); // Portrait, Millimeters, A4 size
+      
+      // 3. Calculate Aspect Ratio to fit A4 page
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      // 4. Add Image & Save
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`OmegaBudget_Report_${selectedMonth}.pdf`);
+    } catch (err) {
+      console.error("PDF Generation failed", err);
+      alert("Could not generate PDF. Please try again.");
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <div className="animate-fade-in" style={{ paddingBottom: 60 }}>
       {/* HEADER & CONTROLS */}
@@ -83,162 +119,180 @@ export default function Reports({ monthlyData, owners, categories, savingsGoals,
           </h1>
           <p className="subtitle">Executive summary for {monthLabel}</p>
         </div>
-        <div className="select-wrapper-small">
-          <Calendar size={16} className="icon" />
-          <select 
-            value={selectedMonth} 
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            style={{ fontSize: '1rem', padding: '8px 12px 8px 32px' }}
+        
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div className="select-wrapper-small">
+            <Calendar size={16} className="icon" />
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              style={{ fontSize: '1rem', padding: '8px 12px 8px 32px' }}
+            >
+              {availableMonths.length > 0 ? availableMonths.map(m => (
+                <option key={m} value={m}>{m}</option>
+              )) : <option value={selectedMonth}>{selectedMonth}</option>}
+            </select>
+          </div>
+
+          <button 
+            className="btn-primary" 
+            onClick={handleDownloadPDF} 
+            disabled={isGeneratingPdf}
+            style={{ fontSize: '0.9rem' }}
           >
-            {availableMonths.length > 0 ? availableMonths.map(m => (
-              <option key={m} value={m}>{m}</option>
-            )) : <option value={selectedMonth}>{selectedMonth}</option>}
-          </select>
+            {isGeneratingPdf ? <Loader2 className="spin" size={16}/> : <Download size={16} />}
+            {isGeneratingPdf ? ' Generating...' : ' Download PDF'}
+          </button>
         </div>
       </header>
 
-      {/* 1. THE CFO "1-PAGER" HERO CARD */}
-      <div className="report-hero-card">
-        <div className="hero-metric">
-          <span className="hero-label">Net Cash Flow</span>
-          <span className={`hero-value ${reportData.netCashFlow >= 0 ? 'pos' : 'neg'}`}>
-            {reportData.netCashFlow >= 0 ? '+' : ''}${reportData.netCashFlow.toFixed(2)}
-          </span>
-          <span className="hero-sub">{reportData.savingsRate}% Savings Rate</span>
-        </div>
+      {/* PRINTABLE AREA STARTS HERE */}
+      <div ref={reportRef} style={{ background: 'var(--bg)', padding: '10px' }}> 
         
-        <div className="hero-divider"></div>
+        {/* 1. THE CFO "1-PAGER" HERO CARD */}
+        <div className="report-hero-card">
+          <div className="hero-metric">
+            <span className="hero-label">Net Cash Flow</span>
+            <span className={`hero-value ${reportData.netCashFlow >= 0 ? 'pos' : 'neg'}`}>
+              {reportData.netCashFlow >= 0 ? '+' : ''}${reportData.netCashFlow.toFixed(2)}
+            </span>
+            <span className="hero-sub">{reportData.savingsRate}% Savings Rate</span>
+          </div>
+          
+          <div className="hero-divider"></div>
 
-        <div className="hero-metric">
-          <span className="hero-label">Total Income</span>
-          <span className="hero-value text-default">${reportData.totalIncome.toFixed(0)}</span>
-          <span className="hero-sub" style={{color: 'var(--green)'}}><TrendingUp size={12}/> Inflow</span>
+          <div className="hero-metric">
+            <span className="hero-label">Total Income</span>
+            <span className="hero-value text-default">${reportData.totalIncome.toFixed(0)}</span>
+            <span className="hero-sub" style={{color: 'var(--green)'}}><TrendingUp size={12}/> Inflow</span>
+          </div>
+
+          <div className="hero-metric">
+            <span className="hero-label">Total Expenses</span>
+            <span className="hero-value text-default">${reportData.totalExpenses.toFixed(0)}</span>
+            <span className="hero-sub" style={{color: 'var(--red)'}}><TrendingDown size={12}/> Outflow</span>
+          </div>
         </div>
 
-        <div className="hero-metric">
-          <span className="hero-label">Total Expenses</span>
-          <span className="hero-value text-default">${reportData.totalExpenses.toFixed(0)}</span>
-          <span className="hero-sub" style={{color: 'var(--red)'}}><TrendingDown size={12}/> Outflow</span>
+        <div className="reports-grid">
+          
+          {/* 2. LIFESTYLE AUDIT (NEEDS VS WANTS) */}
+          <div className="card report-card">
+            <h3><PieIcon size={18}/> Lifestyle Audit</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie 
+                    data={[
+                      { name: 'Needs (Fixed)', value: reportData.fixedCosts, color: '#ef4444' },
+                      { name: 'Wants (Flexible)', value: reportData.flexibleCosts, color: '#3b82f6' },
+                      { name: 'Unspent (Saved)', value: Math.max(0, reportData.netCashFlow), color: '#22c55e' }
+                    ]} 
+                    cx="50%" cy="50%" 
+                    innerRadius={60} 
+                    outerRadius={80} 
+                    paddingAngle={5} 
+                    dataKey="value"
+                  >
+                    <Cell fill="#ef4444"/>
+                    <Cell fill="#3b82f6"/>
+                    <Cell fill="#22c55e"/>
+                  </Pie>
+                  <RechartsTooltip 
+                    contentStyle={{ backgroundColor: 'var(--card)', borderRadius: 8, border: '1px solid var(--border)' }}
+                    itemStyle={{ color: 'var(--text)' }}
+                    formatter={(value) => `$${value.toFixed(0)}`}
+                  />
+                  <Legend verticalAlign="bottom" height={36}/>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <p style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-dim)', marginTop: 0 }}>
+              You spent <b>${reportData.flexibleCosts.toFixed(0)}</b> on flexible lifestyle choices this month.
+            </p>
+          </div>
+
+          {/* 3. CATEGORY BREAKDOWN */}
+          <div className="card report-card">
+            <h3>Top Expense Categories</h3>
+            <div className="category-rank-list">
+              {pieData.slice(0, 5).map((cat, idx) => (
+                <div key={idx} className="rank-item">
+                  <div className="rank-bar-bg">
+                    <div 
+                      className="rank-bar-fill" 
+                      style={{ 
+                        width: `${(cat.value / reportData.totalExpenses) * 100}%`, 
+                        backgroundColor: cat.color 
+                      }}
+                    ></div>
+                  </div>
+                  <div className="rank-info">
+                    <span className="rank-name">{cat.name}</span>
+                    <span className="rank-val">${cat.value.toFixed(0)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 4. FREEDOM FORECAST (RUNWAY) */}
+          <div className="card report-card full-width" style={{ background: 'linear-gradient(135deg, var(--card) 0%, rgba(34, 197, 94, 0.05) 100%)' }}>
+            <h3><CheckCircle2 size={18} color="var(--green)"/> Freedom Forecast</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
+              <div className="forecast-stat">
+                <span className="f-label">Total Liquid Savings</span>
+                <span className="f-val">${reportData.totalLiquidSavings.toFixed(0)}</span>
+              </div>
+              <div className="forecast-stat">
+                <span className="f-label">Avg Monthly Burn</span>
+                <span className="f-val" style={{color: 'var(--red)'}}>-${reportData.totalExpenses.toFixed(0)}</span>
+              </div>
+              <div className="forecast-stat highlight">
+                <span className="f-label">Safety Runway</span>
+                <span className="f-val text-accent">{reportData.monthsOfRunway} Months</span>
+                <span className="f-sub">If income stopped today</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. ITEMIZED BREAKDOWN (TABLE) */}
+          <div className="card report-card full-width">
+            <h3><List size={18}/> Itemized Breakdown</h3>
+            <div className="split-list-container">
+              
+              {/* NEEDS COLUMN */}
+              <div className="split-col">
+                <h4 style={{ color: '#ef4444', borderBottom: '2px solid #ef4444' }}>Needs (Fixed)</h4>
+                <div className="detail-list">
+                  {reportData.needsItems.length > 0 ? reportData.needsItems.map((item, i) => (
+                    <div key={i} className="detail-row">
+                      <span className="d-name">{item.name}</span>
+                      <span className="d-val">${item.amount.toFixed(0)}</span>
+                    </div>
+                  )) : <div className="empty-msg">No fixed bills found.</div>}
+                </div>
+              </div>
+
+              {/* WANTS COLUMN */}
+              <div className="split-col">
+                <h4 style={{ color: '#3b82f6', borderBottom: '2px solid #3b82f6' }}>Wants (Flexible)</h4>
+                <div className="detail-list">
+                  {reportData.wantsItems.length > 0 ? reportData.wantsItems.map((item, i) => (
+                    <div key={i} className="detail-row">
+                      <span className="d-name">{item.name}</span>
+                      <span className="d-val">${item.amount.toFixed(0)}</span>
+                    </div>
+                  )) : <div className="empty-msg">No flexible spending found.</div>}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
         </div>
       </div>
-
-      <div className="reports-grid">
-        
-        {/* 2. LIFESTYLE AUDIT (NEEDS VS WANTS) */}
-        <div className="card report-card">
-          <h3><PieIcon size={18}/> Lifestyle Audit</h3>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 220 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie 
-                  data={[
-                    { name: 'Needs (Fixed)', value: reportData.fixedCosts, color: '#ef4444' },
-                    { name: 'Wants (Flexible)', value: reportData.flexibleCosts, color: '#3b82f6' },
-                    { name: 'Unspent (Saved)', value: Math.max(0, reportData.netCashFlow), color: '#22c55e' }
-                  ]} 
-                  cx="50%" cy="50%" 
-                  innerRadius={60} 
-                  outerRadius={80} 
-                  paddingAngle={5} 
-                  dataKey="value"
-                >
-                  <Cell fill="#ef4444"/>
-                  <Cell fill="#3b82f6"/>
-                  <Cell fill="#22c55e"/>
-                </Pie>
-                <RechartsTooltip 
-                  contentStyle={{ backgroundColor: 'var(--card)', borderRadius: 8, border: '1px solid var(--border)' }}
-                  itemStyle={{ color: 'var(--text)' }}
-                  formatter={(value) => `$${value.toFixed(0)}`}
-                />
-                <Legend verticalAlign="bottom" height={36}/>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <p style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-dim)', marginTop: 0 }}>
-            You spent <b>${reportData.flexibleCosts.toFixed(0)}</b> on flexible lifestyle choices this month.
-          </p>
-        </div>
-
-        {/* 3. CATEGORY BREAKDOWN */}
-        <div className="card report-card">
-          <h3>Top Expense Categories</h3>
-          <div className="category-rank-list">
-            {pieData.slice(0, 5).map((cat, idx) => (
-              <div key={idx} className="rank-item">
-                <div className="rank-bar-bg">
-                  <div 
-                    className="rank-bar-fill" 
-                    style={{ 
-                      width: `${(cat.value / reportData.totalExpenses) * 100}%`, 
-                      backgroundColor: cat.color 
-                    }}
-                  ></div>
-                </div>
-                <div className="rank-info">
-                  <span className="rank-name">{cat.name}</span>
-                  <span className="rank-val">${cat.value.toFixed(0)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 4. FREEDOM FORECAST (RUNWAY) */}
-        <div className="card report-card full-width" style={{ background: 'linear-gradient(135deg, var(--card) 0%, rgba(34, 197, 94, 0.05) 100%)' }}>
-          <h3><CheckCircle2 size={18} color="var(--green)"/> Freedom Forecast</h3>
-          <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
-            <div className="forecast-stat">
-              <span className="f-label">Total Liquid Savings</span>
-              <span className="f-val">${reportData.totalLiquidSavings.toFixed(0)}</span>
-            </div>
-            <div className="forecast-stat">
-              <span className="f-label">Avg Monthly Burn</span>
-              <span className="f-val" style={{color: 'var(--red)'}}>-${reportData.totalExpenses.toFixed(0)}</span>
-            </div>
-            <div className="forecast-stat highlight">
-              <span className="f-label">Safety Runway</span>
-              <span className="f-val text-accent">{reportData.monthsOfRunway} Months</span>
-              <span className="f-sub">If income stopped today</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 5. ITEMIZED BREAKDOWN (NEW TABLE) */}
-        <div className="card report-card full-width">
-          <h3><List size={18}/> Itemized Breakdown</h3>
-          <div className="split-list-container">
-            
-            {/* NEEDS COLUMN */}
-            <div className="split-col">
-              <h4 style={{ color: '#ef4444', borderBottom: '2px solid #ef4444' }}>Needs (Fixed)</h4>
-              <div className="detail-list">
-                {reportData.needsItems.length > 0 ? reportData.needsItems.map((item, i) => (
-                  <div key={i} className="detail-row">
-                    <span className="d-name">{item.name}</span>
-                    <span className="d-val">${item.amount.toFixed(0)}</span>
-                  </div>
-                )) : <div className="empty-msg">No fixed bills found.</div>}
-              </div>
-            </div>
-
-            {/* WANTS COLUMN */}
-            <div className="split-col">
-              <h4 style={{ color: '#3b82f6', borderBottom: '2px solid #3b82f6' }}>Wants (Flexible)</h4>
-              <div className="detail-list">
-                {reportData.wantsItems.length > 0 ? reportData.wantsItems.map((item, i) => (
-                  <div key={i} className="detail-row">
-                    <span className="d-name">{item.name}</span>
-                    <span className="d-val">${item.amount.toFixed(0)}</span>
-                  </div>
-                )) : <div className="empty-msg">No flexible spending found.</div>}
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
+      {/* END PRINTABLE AREA */}
     </div>
   );
 }
