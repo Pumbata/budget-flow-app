@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, PieChart as PieIcon, Activity, Calendar, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, PieChart as PieIcon, Activity, Calendar, Download, AlertCircle, CheckCircle2, List } from 'lucide-react';
 
 export default function Reports({ monthlyData, owners, categories, savingsGoals, recurringBills }) {
   // Default to the most recent month with data, or current month
@@ -27,6 +27,10 @@ export default function Reports({ monthlyData, owners, categories, savingsGoals,
     const categoryBreakdown = {};
     let fixedCosts = 0; // Needs
     let flexibleCosts = 0; // Wants
+    
+    // New: Itemized Lists
+    const needsItems = [];
+    const wantsItems = [];
 
     bills.forEach(bill => {
       totalExpenses += bill.amount;
@@ -35,24 +39,29 @@ export default function Reports({ monthlyData, owners, categories, savingsGoals,
       // Category Totals
       categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + bill.amount;
 
-      // Needs vs Wants Logic (Simple Heuristic based on category)
+      // Needs vs Wants Logic
       if (['housing', 'utilities', 'debt', 'health', 'transport'].includes(cat)) {
         fixedCosts += bill.amount;
+        needsItems.push(bill);
       } else {
         flexibleCosts += bill.amount;
+        wantsItems.push(bill);
       }
     });
+
+    // Sort itemized lists by amount (Highest first)
+    needsItems.sort((a, b) => b.amount - a.amount);
+    wantsItems.sort((a, b) => b.amount - a.amount);
 
     // 3. Net Results
     const netCashFlow = totalIncome - totalExpenses;
     const savingsRate = totalIncome > 0 ? ((netCashFlow / totalIncome) * 100).toFixed(1) : 0;
     
     // 4. Savings Runway
-    // (Total Savings Goal Balances) / (Average Monthly Expense)
     const totalLiquidSavings = savingsGoals.reduce((sum, g) => sum + g.totalPaid, 0);
     const monthsOfRunway = totalExpenses > 0 ? (totalLiquidSavings / totalExpenses).toFixed(1) : 0;
 
-    return { totalIncome, totalExpenses, netCashFlow, savingsRate, categoryBreakdown, fixedCosts, flexibleCosts, totalLiquidSavings, monthsOfRunway };
+    return { totalIncome, totalExpenses, netCashFlow, savingsRate, categoryBreakdown, fixedCosts, flexibleCosts, totalLiquidSavings, monthsOfRunway, needsItems, wantsItems };
   }, [selectedMonth, monthlyData, owners, savingsGoals]);
 
   // Chart Data Prep
@@ -192,6 +201,40 @@ export default function Reports({ monthlyData, owners, categories, savingsGoals,
               <span className="f-val text-accent">{reportData.monthsOfRunway} Months</span>
               <span className="f-sub">If income stopped today</span>
             </div>
+          </div>
+        </div>
+
+        {/* 5. ITEMIZED BREAKDOWN (NEW TABLE) */}
+        <div className="card report-card full-width">
+          <h3><List size={18}/> Itemized Breakdown</h3>
+          <div className="split-list-container">
+            
+            {/* NEEDS COLUMN */}
+            <div className="split-col">
+              <h4 style={{ color: '#ef4444', borderBottom: '2px solid #ef4444' }}>Needs (Fixed)</h4>
+              <div className="detail-list">
+                {reportData.needsItems.length > 0 ? reportData.needsItems.map((item, i) => (
+                  <div key={i} className="detail-row">
+                    <span className="d-name">{item.name}</span>
+                    <span className="d-val">${item.amount.toFixed(0)}</span>
+                  </div>
+                )) : <div className="empty-msg">No fixed bills found.</div>}
+              </div>
+            </div>
+
+            {/* WANTS COLUMN */}
+            <div className="split-col">
+              <h4 style={{ color: '#3b82f6', borderBottom: '2px solid #3b82f6' }}>Wants (Flexible)</h4>
+              <div className="detail-list">
+                {reportData.wantsItems.length > 0 ? reportData.wantsItems.map((item, i) => (
+                  <div key={i} className="detail-row">
+                    <span className="d-name">{item.name}</span>
+                    <span className="d-val">${item.amount.toFixed(0)}</span>
+                  </div>
+                )) : <div className="empty-msg">No flexible spending found.</div>}
+              </div>
+            </div>
+
           </div>
         </div>
 

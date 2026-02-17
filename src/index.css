@@ -2271,3 +2271,77 @@ h1 { margin: 0; font-size: 2rem; }
 .forecast-stat.highlight .f-val { font-size: 1.8rem; }
 
 
+/* --- ITEMIZED REPORT TABLE --- */
+.split-list-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+@media (max-width: 768px) {
+  .split-list-container {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+}
+
+.split-col h4 {
+  margin: 0 0 15px 0;
+  padding-bottom: 8px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 400px; /* Prevent it from taking over the whole page if huge */
+  overflow-y: auto;
+  padding-right: 5px; /* Space for scrollbar */
+}
+
+/* Custom Scrollbar for the list */
+.detail-list::-webkit-scrollbar {
+  width: 4px;
+}
+.detail-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 0.9rem;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.d-name {
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 10px;
+}
+
+.d-val {
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.empty-msg {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 10px 0;
+}
+
+
