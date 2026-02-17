@@ -13,6 +13,7 @@ import { autoBalanceBudget } from './balanceEngine';
 import './index.css';
 import Landing from './Landing';
 import Onboarding from './Onboarding';
+import Reports from './Reports';
 
 // --- CONSTANTS & HELPERS ---
 export const DEFAULT_CATEGORIES = { housing: { label: 'Housing', color: '#ef4444' }, transport: { label: 'Transport', color: '#f97316' }, utilities: { label: 'Utilities', color: '#eab308' }, debt: { label: 'Debt', color: '#8b5cf6' }, lifestyle: { label: 'Lifestyle', color: '#ec4899' }, shopping: { label: 'Shopping', color: '#06b6d4' }, health: { label: 'Health', color: '#10b981' }, savings: { label: 'Savings', color: '#22c55e' }, other: { label: 'Other', color: '#64748b' } };
@@ -457,6 +458,7 @@ export default function App() {
         {/* ADDED TARGET CLASS: tour-nav-bills */}
         <button className={`nav-item tour-nav-bills ${view === 'bills' ? 'active' : ''}`} onClick={() => setView('bills')}><Receipt size={20} /> Recurring Bills</button>
         <button className={`nav-item ${view === 'goals' ? 'active' : ''}`} onClick={() => setView('goals')}><Target size={20} /> Savings Goals</button>
+        <button className={`nav-item ${view === 'reports' ? 'active' : ''}`} onClick={() => setView('reports')}><Activity size={20} /> Reports</button>
         <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}><SettingsIcon size={20} /> Settings</button>
         <button className="nav-item" onClick={handleSignOut} style={{marginTop: 'auto', color: 'var(--red)'}}><LogOut size={20} /> Sign Out</button>
       </nav>
@@ -565,6 +567,7 @@ export default function App() {
         {view === 'bills' && <RecurringBills bills={recurringBills} onAddBill={addRecurring} onEditBill={updateRecurring} onDeleteBill={deleteRecurring} owners={allEntities} categories={categories} />}
         {view === 'goals' && <SavingsManager goals={savingsGoals} onAddGoal={addGoal} onEditGoal={updateGoal} onDeleteGoal={deleteGoal} owners={allEntities} />}
         {view === 'forecast' && ( <div className="animate-fade-in"> <div className="month-selector"><button onClick={() => changeMonth(-1)}><ChevronLeft size={24}/></button><h2>{monthLabel}</h2><button onClick={() => changeMonth(1)}><ChevronRight size={24}/></button></div> {(() => { let totalRollover = 0; owners.forEach(owner => { totalRollover += getRollover(monthKey, owner); }); return <Forecast bills={currentBills} currentDate={currentDate} monthLabel={monthLabel} incomes={currentIncomes} owners={allEntities} rollover={totalRollover} />; })()} </div> )}
+        {view === 'reports' && <Reports monthlyData={monthlyData} owners={allEntities} categories={categories} savingsGoals={savingsGoals} recurringBills={recurringBills} />}
         {view === 'settings' && <Settings currentTheme={theme} setTheme={setTheme} owners={owners} setOwners={setOwners} hasJointPool={hasJointPool} setHasJointPool={setHasJointPool} jointPoolName={jointPoolName} setJointPoolName={setJointPoolName} appStartDate={appStartDate} startingBalances={startingBalances} setStartingBalances={setStartingBalances} categories={categories} setCategories={setCategories} recurringBills={recurringBills} setRecurringBills={setRecurringBills} savingsGoals={savingsGoals} setSavingsGoals={setSavingsGoals} monthlyData={monthlyData} setMonthlyData={setMonthlyData} onReplayTour={() => { setTourStepIndex(0); setHasSeenTour(false); setRunTour(true); setView('dashboard'); }} />}      
       </main>
 
