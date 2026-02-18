@@ -119,7 +119,13 @@ export default function UserGuide() {
             OmegaBudget uses a visual Kanban Board to place bills in <strong>Time Slots</strong>.
           </p>
 
-          <Placeholder label="Visual Board vs. List View" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/visual-vs-list.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
 
           <h4>Why "Active Budgeting" Works</h4>
           <p style={{ lineHeight: 1.6 }}>
