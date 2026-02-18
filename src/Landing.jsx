@@ -2,15 +2,14 @@ import React from 'react';
 import { Wallet, LayoutDashboard, SplitSquareHorizontal, CheckSquare, ArrowRight, ShieldCheck } from 'lucide-react';
 import DemoBoard from './DemoBoard';
 
-
 export default function Landing({ onSignIn, onSignUp }) {
   return (
     <div className="landing-container" style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', display: 'flex', flexDirection: 'column' }}>
       
       {/* Top Navigation */}
-      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', borderBottom: '1px solid var(--border)' }}>
+      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', borderBottom: '1px solid var(--border)', background: 'var(--bg)', position: 'relative', zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--accent)' }}>
-        <img src="/logo.png" alt="OmegaBudget Logo" style={{ width: '32px', height: '32px' }} />
+          <img src="/logo.png" alt="OmegaBudget Logo" style={{ width: '32px', height: '32px' }} />
           <span style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text)' }}>OmegaBudget</span>
         </div>
         <div style={{ display: 'flex', gap: 15 }}>
@@ -19,30 +18,54 @@ export default function Landing({ onSignIn, onSignUp }) {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <header style={{ textAlign: 'center', padding: '100px 20px', maxWidth: '800px', margin: '0 auto', flex: 1 }}>
-        <h1 style={{ fontSize: '4rem', letterSpacing: '-2px', lineHeight: 1.1, marginBottom: 20 }}>
-          Manage your money from <span style={{ color: 'var(--accent)' }}>Alpha to Omega.</span>
-        </h1>
-        <p style={{ fontSize: '1.2rem', color: 'var(--text-dim)', marginBottom: 40, lineHeight: 1.6 }}>
-          The first visual, paycheck-to-paycheck financial board designed for modern households. Split expenses, track shared goals, and close your books with confidence.
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
-          <button onClick={onSignUp} className="btn-primary" style={{ fontSize: '1.1rem', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            Start Budgeting Free <ArrowRight size={18} />
-          </button>
-        </div>
+      {/* Hero Section with Background Image */}
+      <div style={{ 
+        position: 'relative', 
+        width: '100%', 
+        // This gradient darkens the image so your white text pops. 
+        // It goes from dark blue/black at the top to slightly lighter at the bottom.
+        backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.7)), url("/hero-home.png")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        padding: '100px 20px',
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
         
-        {/* Mockup / Hero Graphic Area */}
-        <div style={{ marginTop: 60, padding: 10, background: 'var(--border)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
-           {/* Replace the static text with the new Demo component */}
-           <DemoBoard />
-        </div>
-        
-      </header>
+        <header style={{ textAlign: 'center', maxWidth: '900px', width: '100%', position: 'relative', zIndex: 2 }}>
+          <h1 style={{ fontSize: '4rem', letterSpacing: '-2px', lineHeight: 1.1, marginBottom: 20, textShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+            Manage your money from <span style={{ color: '#60a5fa' }}>Alpha to Omega.</span>
+          </h1>
+          <p style={{ fontSize: '1.3rem', color: '#e2e8f0', marginBottom: 40, lineHeight: 1.6, textShadow: '0 2px 10px rgba(0,0,0,0.5)', maxWidth: '700px', margin: '0 auto 40px auto' }}>
+            The first visual, paycheck-to-paycheck financial board designed for modern households. Split expenses, track shared goals, and close your books with confidence.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
+            <button onClick={onSignUp} className="btn-primary" style={{ fontSize: '1.1rem', padding: '14px 28px', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.5)' }}>
+              Start Budgeting Free <ArrowRight size={18} />
+            </button>
+          </div>
+          
+          {/* Mockup / Hero Graphic Area with Glassmorphism */}
+          <div style={{ 
+            marginTop: 60, 
+            padding: 20, 
+            // "Glass" effect
+            background: 'rgba(30, 41, 59, 0.6)', 
+            backdropFilter: 'blur(12px)',
+            borderRadius: 20, 
+            border: '1px solid rgba(255,255,255,0.1)', 
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' 
+          }}>
+             <DemoBoard />
+          </div>
+          
+        </header>
+      </div>
 
       {/* Features Grid */}
-      <section style={{ padding: '80px 20px', background: 'rgba(0,0,0,0.2)' }}>
+      <section style={{ padding: '80px 20px', background: 'var(--bg)' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 40 }}>
           
           <div className="card" style={{ padding: 30 }}>
@@ -67,7 +90,7 @@ export default function Landing({ onSignIn, onSignUp }) {
       </section>
 
       {/* Footer */}
-      <footer style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-dim)', borderTop: '1px solid var(--border)' }}>
+      <footer style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-dim)', borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <ShieldCheck size={18} />
           <span>Secure, cloud-synced, and built for modern families.</span>
