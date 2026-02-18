@@ -37,6 +37,7 @@ export default function App() {
   // ==========================================
 
   // --- Session & Loading ---
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [session, setSession] = useState(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [publicRoute, setPublicRoute] = useState('landing');  
