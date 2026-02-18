@@ -93,7 +93,13 @@ export default function UserGuide() {
             </ul>
           </div>
           
-          <Placeholder label="Kanban Manufacturing Workflow Diagram" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/kanban-flow.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
 
           <h3>2. Your Money is a Supply Chain</h3>
           <p style={{ lineHeight: 1.6 }}>
