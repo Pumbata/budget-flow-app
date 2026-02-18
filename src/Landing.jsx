@@ -25,8 +25,8 @@ export default function Landing({ onSignIn, onSignUp }) {
         backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.7)), url("/hero-home.png")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        padding: '120px 20px 80px 20px', // Added top padding for nav
-        minHeight: '100vh', // Ensure it covers screen
+        padding: '120px 20px 80px 20px', 
+        minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -35,9 +35,9 @@ export default function Landing({ onSignIn, onSignUp }) {
         
         <header style={{ textAlign: 'center', maxWidth: '1000px', width: '100%', position: 'relative', zIndex: 2 }}>
           
-          {/* Main Headline */}
+          {/* UPDATED HEADLINE */}
           <h1 style={{ fontSize: '4rem', letterSpacing: '-2px', lineHeight: 1.1, marginBottom: 20, color: '#fff', textShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
-            Manage your money from <span style={{ color: '#60a5fa' }}>Alpha to Omega.</span>
+            The Last Budget <span style={{ color: '#60a5fa' }}>You'll Ever Need.</span>
           </h1>
           
           <p style={{ fontSize: '1.3rem', color: '#cbd5e1', marginBottom: 40, lineHeight: 1.6, textShadow: '0 2px 10px rgba(0,0,0,0.5)', maxWidth: '700px', margin: '0 auto 40px auto' }}>
