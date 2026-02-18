@@ -157,7 +157,13 @@ export default function UserGuide() {
             At the top of the screen, you will see your Income Cards. This is where you tell the app how much money you have to work with this month.
           </p>
           
-          <Placeholder label="Top section: Income Inputs and Free Cash Badge" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/income.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ul style={{ lineHeight: 1.8, marginBottom: 20 }}>
             <li><strong>Paycheck 1 & 2:</strong> Enter the expected amount for your first and second paychecks of the month.</li>
@@ -175,7 +181,13 @@ export default function UserGuide() {
             OmegaBudget uses a "Kanban" style board. This allows you to visually move bills between paychecks to ensure you never overdraft.
           </p>
           
-          <Placeholder label="The Kanban Board: Paycheck 1 vs Paycheck 2" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/kanban-board.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <p><strong>Drag & Drop:</strong> Click and hold any bill card to move it.</p>
           <div style={{ background: 'rgba(255,255,255,0.05)', padding: 15, borderRadius: 8, marginBottom: 20 }}>
@@ -185,7 +197,13 @@ export default function UserGuide() {
 
           <h3>3. The "Balance All" Button</h3>
           <p>Don't want to do the math yourself? Let our engine do it for you.</p>
-          <Placeholder label="Header Buttons: Focusing on 'Balance All'" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/balance-all-button.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           <p>
             Click the <strong>Balance All</strong> button in the top right. The app will instantly shuffle your bills into the optimal columns to maximize your Free Cash flow for both pay periods.
           </p>
@@ -194,7 +212,13 @@ export default function UserGuide() {
           <p>
             As you pay bills in real life (via your bank's app or website), mark them as paid in OmegaBudget to keep your board clean.
           </p>
-          <Placeholder label="Bill Card: Close up of Checkmark Button" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/mark-paid.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Mark as Paid:</strong> Click the circle icon on the left of any bill card. It will turn green, signaling that money has physically left your account.</li>
             <li><strong>One-Time Expenses:</strong> Did you buy something unexpected? Click the small <strong>+</strong> button in a column header to add a "One-Time Bill" (e.g., "Car Repair - $200") to keep your budget accurate.</li>
@@ -202,7 +226,13 @@ export default function UserGuide() {
 
           <h3>5. Closing the Books</h3>
           <p>At the end of the month, you need to finalize your budget to prepare for next month.</p>
-          <Placeholder label="'Close Books' Modal Window" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/close-books.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           <ol style={{ lineHeight: 1.8, marginBottom: 20 }}>
             <li>Click <strong>Close Books</strong> at the top right.</li>
             <li>Enter your <strong>Actual Bank Balance</strong>.</li>
