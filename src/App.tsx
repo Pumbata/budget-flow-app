@@ -472,7 +472,7 @@ export default function App() {
         <button className={`nav-item ${view === 'reports' ? 'active' : ''}`} onClick={() => setView('reports')}><Activity size={20} /> Reports</button>
         <button className={`nav-item ${view === 'tools' ? 'active' : ''}`} onClick={() => setView('tools')}><Calculator size={20} /> Tools</button>
         <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}><SettingsIcon size={20} /> Settings</button>
-        <button className={`nav-item ${activeTab === 'guide' ? 'active' : ''}`} onClick={() => setActiveTab('guide')}><BookOpen size={20} /> User Guide</button>
+        <button className={`nav-item ${activeTab === 'guide' ? 'active' : ''}`} onClick={() => setActiveTab('guide')}><BookOpen size={20} /> Guide</button>
         <button className="nav-item" onClick={handleSignOut} style={{marginTop: 'auto', color: 'var(--red)'}}><LogOut size={20} /> Sign Out</button>
       </nav>
 
