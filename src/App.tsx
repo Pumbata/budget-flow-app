@@ -7,7 +7,7 @@ import {
   Plus, X, Target, PieChart as PieChartIcon, Kanban, Filter, Maximize2, CheckSquare, 
   CalendarClock, Calendar as CalendarIcon, ChevronDown, Layers, Tag, Home, Car, Zap, 
   CreditCard, Smile, ShoppingBag, Activity, HelpCircle, Landmark, Lock, Unlock, 
-  LogOut, Loader2, TrendingUp, TrendingDown, DollarSign, List, ArrowRight, 
+  LogOut, Loader2, TrendingUp, TrendingDown, DollarSign, List, ArrowRight, BookOpen,
   ArrowUpRight, ArrowDownRight 
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ComposedChart, Area, Line } from 'recharts';
@@ -23,6 +23,7 @@ import Landing from './Landing';
 import Onboarding from './Onboarding';
 import Reports from './Reports';
 import Tools from './Tools';
+import UserGuide from './UserGuide';
 
 
 // --- CONSTANTS & HELPERS ---
@@ -471,6 +472,7 @@ export default function App() {
         <button className={`nav-item ${view === 'reports' ? 'active' : ''}`} onClick={() => setView('reports')}><Activity size={20} /> Reports</button>
         <button className={`nav-item ${view === 'tools' ? 'active' : ''}`} onClick={() => setView('tools')}><Calculator size={20} /> Tools</button>
         <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}><SettingsIcon size={20} /> Settings</button>
+        <button className={`nav-item ${activeTab === 'guide' ? 'active' : ''}`} onClick={() => setActiveTab('guide')}><BookOpen size={20} /> User Guide</button>
         <button className="nav-item" onClick={handleSignOut} style={{marginTop: 'auto', color: 'var(--red)'}}><LogOut size={20} /> Sign Out</button>
       </nav>
 
@@ -580,6 +582,7 @@ export default function App() {
         {view === 'forecast' && ( <div className="animate-fade-in"> <div className="month-selector"><button onClick={() => changeMonth(-1)}><ChevronLeft size={24}/></button><h2>{monthLabel}</h2><button onClick={() => changeMonth(1)}><ChevronRight size={24}/></button></div> {(() => { let totalRollover = 0; owners.forEach(owner => { totalRollover += getRollover(monthKey, owner); }); return <Forecast bills={currentBills} currentDate={currentDate} monthLabel={monthLabel} incomes={currentIncomes} owners={allEntities} rollover={totalRollover} />; })()} </div> )}
         {view === 'reports' && <Reports monthlyData={monthlyData} owners={allEntities} categories={categories} savingsGoals={savingsGoals} recurringBills={recurringBills} />}
         {view === 'tools' && <Tools />}
+        {activeTab === 'guide' && <UserGuide />}
         {view === 'settings' && <Settings currentTheme={theme} setTheme={setTheme} owners={owners} setOwners={setOwners} hasJointPool={hasJointPool} setHasJointPool={setHasJointPool} jointPoolName={jointPoolName} setJointPoolName={setJointPoolName} appStartDate={appStartDate} startingBalances={startingBalances} setStartingBalances={setStartingBalances} categories={categories} setCategories={setCategories} recurringBills={recurringBills} setRecurringBills={setRecurringBills} savingsGoals={savingsGoals} setSavingsGoals={setSavingsGoals} monthlyData={monthlyData} setMonthlyData={setMonthlyData} onReplayTour={() => { setTourStepIndex(0); setHasSeenTour(false); setRunTour(true); setView('dashboard'); }} />}      
       </main>
 
