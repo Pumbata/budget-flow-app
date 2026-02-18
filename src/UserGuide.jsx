@@ -260,7 +260,20 @@ export default function UserGuide() {
           <h3>1. Adding a New Bill</h3>
           <p>To get started, navigate to the Recurring Bills tab in the sidebar.</p>
           
-          <Placeholder label="Recurring Bills Header: 'Add Bill' Button" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/add-bill-button.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
+<div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/add-bill.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ol style={{ lineHeight: 1.8, marginBottom: 20 }}>
             <li>Click the blue <strong>+ Add Bill</strong> button in the top right.</li>
@@ -281,7 +294,13 @@ export default function UserGuide() {
             Your bills are automatically grouped by Owner. This helps you see exactly who is responsible for what before the month even begins.
           </p>
           
-          <Placeholder label="List of Bills Grouped by Owner" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/bills-list.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Editing:</strong> Did your internet price go up? Click the <strong>Pencil</strong> icon to update the Master Amount. Future months will use this new price.</li>
@@ -294,7 +313,13 @@ export default function UserGuide() {
           </div>
           
           <p>To push your changes to the active Dashboard:</p>
-          <Placeholder label="Dashboard Header: Highlighting 'Sync' Button" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/sync-button.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ol style={{ lineHeight: 1.8 }}>
             <li>Go back to the Dashboard.</li>
