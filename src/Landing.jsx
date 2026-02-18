@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wallet, LayoutDashboard, SplitSquareHorizontal, CheckSquare, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Wallet, ArrowRight, ShieldCheck } from 'lucide-react';
 import DemoBoard from './DemoBoard';
 
 export default function Landing({ onSignIn, onSignUp }) {
@@ -22,8 +22,7 @@ export default function Landing({ onSignIn, onSignUp }) {
       <div style={{ 
         position: 'relative', 
         width: '100%', 
-        // This gradient darkens the image so your white text pops. 
-        // It goes from dark blue/black at the top to slightly lighter at the bottom.
+        // Dark gradient overlay for text readability
         backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.7)), url("/hero-home.png")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
@@ -47,11 +46,10 @@ export default function Landing({ onSignIn, onSignUp }) {
             </button>
           </div>
           
-          {/* Mockup / Hero Graphic Area with Glassmorphism */}
+          {/* Mockup area with Glassmorphism */}
           <div style={{ 
             marginTop: 60, 
             padding: 20, 
-            // "Glass" effect
             background: 'rgba(30, 41, 59, 0.6)', 
             backdropFilter: 'blur(12px)',
             borderRadius: 20, 
@@ -64,28 +62,41 @@ export default function Landing({ onSignIn, onSignUp }) {
         </header>
       </div>
 
-      {/* Features Grid */}
+      {/* Features Section - UPDATED LAYOUT */}
       <section style={{ padding: '80px 20px', background: 'var(--bg)' }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 40 }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
           
-          <div className="card" style={{ padding: 30 }}>
-            <LayoutDashboard size={40} color="var(--accent)" style={{ marginBottom: 20 }} />
-            <h3 style={{ fontSize: '1.3rem', marginBottom: 10 }}>Kanban-Style Tracking</h3>
-            <p style={{ color: 'var(--text-dim)', lineHeight: 1.5 }}>Drag and drop your bills between paychecks. See exactly what is due, when it's due, and where the money is coming from.</p>
+          {/* 1. The New Feature Image Header */}
+          <div style={{ marginBottom: '50px', textAlign: 'center' }}>
+            <img 
+              src="/hero2.png" 
+              alt="Features: Kanban, Splitting, Closing Ritual" 
+              style={{ maxWidth: '100%', height: 'auto', borderRadius: '12px', boxShadow: '0 10px 30px -15px rgba(0,0,0,0.2)' }}
+            />
           </div>
 
-          <div className="card" style={{ padding: 30 }}>
-            <SplitSquareHorizontal size={40} color="var(--green)" style={{ marginBottom: 20 }} />
-            <h3 style={{ fontSize: '1.3rem', marginBottom: 10 }}>Proportional Splitting</h3>
-            <p style={{ color: 'var(--text-dim)', lineHeight: 1.5 }}>Perfect for couples. Maintain separate accounts but easily manage the "Shared" house bills without complex spreadsheets.</p>
-          </div>
+          {/* 2. The 3-Column Text Grid Underneath */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 40, textAlign: 'center' }}>
+            
+            {/* Column 1 */}
+            <div>
+              <h3 style={{ fontSize: '1.4rem', marginBottom: 15, fontWeight: 700 }}>Kanban-Style Tracking</h3>
+              <p style={{ color: 'var(--text-dim)', lineHeight: 1.6, fontSize: '1.05rem' }}>Drag and drop your bills between paychecks. See exactly what is due, when it's due, and where the money is coming from.</p>
+            </div>
 
-          <div className="card" style={{ padding: 30 }}>
-            <CheckSquare size={40} color="var(--orange)" style={{ marginBottom: 20 }} />
-            <h3 style={{ fontSize: '1.3rem', marginBottom: 10 }}>The Closing Ritual</h3>
-            <p style={{ color: 'var(--text-dim)', lineHeight: 1.5 }}>At the end of the month, reconcile your expected cash with reality. Any leftover free cash rolls over to fuel your goals.</p>
-          </div>
+            {/* Column 2 */}
+            <div>
+              <h3 style={{ fontSize: '1.4rem', marginBottom: 15, fontWeight: 700 }}>Proportional Splitting</h3>
+              <p style={{ color: 'var(--text-dim)', lineHeight: 1.6, fontSize: '1.05rem' }}>Perfect for couples. Maintain separate accounts but easily manage the "Shared" house bills without complex spreadsheets.</p>
+            </div>
 
+            {/* Column 3 */}
+            <div>
+              <h3 style={{ fontSize: '1.4rem', marginBottom: 15, fontWeight: 700 }}>The Closing Ritual</h3>
+              <p style={{ color: 'var(--text-dim)', lineHeight: 1.6, fontSize: '1.05rem' }}>At the end of the month, reconcile your expected cash with reality. Any leftover free cash rolls over to fuel your goals.</p>
+            </div>
+
+          </div>
         </div>
       </section>
 
