@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Moon, Sun, UserPlus, Trash2, Tags, Plus, Coffee, Home, Users, Download, Upload, PlayCircle, Lock } from 'lucide-react';
 import { supabase } from './supabaseClient';
+import { LogOut } from 'lucide-react';
 
 export default function Settings({ 
   currentTheme, setTheme, 
@@ -153,6 +154,15 @@ export default function Settings({
     } else {
       console.error(error);
       alert("Error generating link token.");
+    }
+  };
+
+
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Error signing out:", error);
+      alert("There was an issue signing out.");
     }
   };
 
@@ -336,6 +346,29 @@ export default function Settings({
                 <span>{owner}</span>
                 <input type="number" className="input-field" value={startingBalances[owner] || ''} placeholder="0.00" onChange={(e) => setStartingBalances({...startingBalances, [owner]: e.target.value})} />
               </div>
+
+              {/* SIGN OUT SECTION (MOBILE FRIENDLY) */}
+      <div style={{ marginTop: 40, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+      <button 
+        onClick={handleSignOut} 
+        className="btn-cancel" 
+        style={{ 
+          width: '100%', 
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          color: 'var(--red)', 
+          borderColor: 'rgba(239, 68, 68, 0.3)', 
+          background: 'rgba(239, 68, 68, 0.05)',
+          padding: '12px',
+          fontSize: '1rem',
+          fontWeight: 600
+        }}
+      >
+        <LogOut size={20} style={{ marginRight: 8 }} />
+        Sign Out of OmegaBudget
+      </button>
+    </div>
             ))}
           </div>
         </div>
