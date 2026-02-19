@@ -552,7 +552,13 @@ export default function UserGuide() {
           <h3>1. The Executive Summary (The 1-Pager)</h3>
           <p>At the top of the page, you get an instant health check of your finances for the selected month.</p>
           
-          <Placeholder label="Top Hero Card: Net Cash Flow, Income, Expenses" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/top-hero-card.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Net Cash Flow:</strong> This is the most important number in the app.
@@ -568,9 +574,21 @@ export default function UserGuide() {
           <h3>2. The Lifestyle Audit (Needs vs. Wants)</h3>
           <p>Ever feel like you make good money but still feel broke? This chart explains why.</p>
           
-          <Placeholder label="Needs vs. Wants Pie Chart" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/report-pie-chart.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
-          <Placeholder label="Needs vs Wants Budget Pie Chart Diagram" />
+<div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/report-table.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
 
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Needs (Fixed Costs):</strong> These are bills you must pay to survive (Housing, Utilities, Debt, Groceries).</li>
@@ -581,7 +599,13 @@ export default function UserGuide() {
           <h3>3. The Trend Report (Comparison Mode)</h3>
           <p>Want to see if you did better this month than last month? Use the View Switcher in the top right.</p>
           
-          <Placeholder label="View Switcher toggled to 'Comparison' & Trend Table" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/compare.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ol style={{ lineHeight: 1.8 }}>
             <li>Click the <strong>Comparison</strong> button. The view changes to show a Month-over-Month breakdown.</li>
@@ -593,11 +617,22 @@ export default function UserGuide() {
             </li>
             <li><strong>Itemized List:</strong> See exactly which categories changed the most so you can fix the leak.</li>
           </ol>
+          
+          
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/category-changes.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
+
+
 
           <h3>4. Freedom Forecast (Runway)</h3>
           <p>This is your ultimate safety net metric.</p>
           
-          <Placeholder label="Freedom Forecast Card: 'Months of Runway'" />
+          
           
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Runway:</strong> This calculates how long you could survive without a job.</li>
@@ -608,7 +643,21 @@ export default function UserGuide() {
           <h3>5. Exporting to PDF</h3>
           <p>Need to show your budget to a spouse, a loan officer, or just want a physical copy for your records?</p>
           
-          <Placeholder label="'Download PDF Report' Button" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/pdf-button.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
+
+<div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/pdf.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ul style={{ lineHeight: 1.8 }}>
             <li>Click <strong>Download PDF Report</strong> in the top right corner.</li>
@@ -630,7 +679,13 @@ export default function UserGuide() {
           <h3>1. Manage Users (Household Members)</h3>
           <p>OmegaBudget is built for real life, which often involves partners, spouses, or roommates.</p>
           
-          <Placeholder label="Manage Users Panel: Add/Edit Buttons" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/settings-accounts.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Add User:</strong> Click the <strong>+ Add User</strong> button to invite a spouse or partner. <br/><em style={{ color: 'var(--text-dim)' }}>Tip: Use their first name or nickname (e.g., "Alex").</em></li>
@@ -646,7 +701,13 @@ export default function UserGuide() {
           <h3>2. Customize Categories</h3>
           <p>Your budget, your rules. You can rename the default categories to match your life.</p>
           
-          <Placeholder label="Category Customization: Rename & Color Picker" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/settings-colors.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Rename:</strong> Don't have "Pets"? Rename it to "Hobbies" or "Kids."</li>
