@@ -151,6 +151,17 @@ export default function Settings({
           </button>
         </div>
 
+        <div style={{ marginTop: 20, padding: 20, background: 'rgba(59, 130, 246, 0.1)', borderRadius: 12 }}>
+  <h3 style={{ margin: '0 0 10px 0', color: 'var(--accent)' }}>Quick Entry Bot</h3>
+  <p style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginBottom: 15 }}>
+    Connect your Telegram account to instantly log expenses via text message.
+  </p>
+  <button onClick={handleConnectTelegram} className="btn-primary" style={{ background: '#0088cc', color: 'white' }}>
+    Connect Telegram
+  </button>
+</div>
+
+
         {/* APPEARANCE */}
         <div className="card settings-card">
           <h3>Appearance</h3>

@@ -103,6 +103,27 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, [isRecoveringPassword]);
 
+// |**********|| TELEGRAM BOT ||***********|
+const handleConnectTelegram = async () => {
+  // Generate a random 8-character token
+  const linkToken = Math.random().toString(36).substring(2, 10);
+  
+  // Save the token to this user's Supabase profile
+  const { error } = await supabase
+    .from('user_state')
+    .update({ telegram_link_token: linkToken })
+    .eq('id', session.user.id);
+
+  if (!error) {
+    // Redirect them to Telegram with the token attached to the URL
+    // Replace 'OmegaBudgetApp_Bot' with whatever username you chose in Step 1
+    window.location.href = `https://t.me/OmegaBudgetApp_Bot?start=${linkToken}`;
+  } else {
+    alert("Error generating link token.");
+  }
+};
+
+
   const loadUserData = async (userId) => {
     setIsLoadingData(true);
     try {
