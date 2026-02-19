@@ -375,7 +375,8 @@ export default function Settings({
             background: '#f59e0b', 
             color: '#fff',
             textDecoration: 'none',
-            border: 'none'
+            border: 'none',
+            alignContent: 'center'
           }}
         >
           ☕ Buy Me a Coffee
