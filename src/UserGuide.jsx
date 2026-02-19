@@ -467,7 +467,13 @@ export default function UserGuide() {
           <h3>1. The Debt Destroyer 📉</h3>
           <p>Paying off debt is hard, but seeing the finish line makes it easier. This tool proves exactly how fast you can become debt-free.</p>
           
-          <Placeholder label="Debt Destroyer Interface: List of Debts & Payoff Chart" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/dd-interface.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Add Your Debts:</strong> Enter the Name, Balance, Interest Rate (APR), and Minimum Payment for each loan or credit card. Click <strong>+ Add</strong>.</li>
@@ -476,7 +482,6 @@ export default function UserGuide() {
 
           <h4>Choose Your Strategy:</h4>
           
-          <Placeholder label="Debt Snowball vs Avalanche Method Diagram" />
 
           <ul style={{ lineHeight: 1.8, marginBottom: 20 }}>
             <li><strong>Avalanche 🏔️:</strong> Target the Highest Interest Rate first. (Mathematically saves you the most money).</li>
@@ -488,7 +493,13 @@ export default function UserGuide() {
           <h3>2. Millionaire Math 📈</h3>
           <p>Compound interest is the 8th wonder of the world. This tool helps you visualize how your money grows over time.</p>
           
-          <Placeholder label="Compound Interest Chart: Principal (Blue) vs Interest (Green)" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/mm-math.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Inputs:</strong>
@@ -511,7 +522,13 @@ export default function UserGuide() {
           <h3>3. Is It Worth It? ⏳</h3>
           <p>This is a "Gut Check" calculator for impulse spending. It translates dollar signs into "Life Hours."</p>
           
-          <Placeholder label="Time-Cost Calculator showing 'Hours of Work' Result" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/worth-it.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ol style={{ lineHeight: 1.8 }}>
             <li><strong>Enter Your Income:</strong> Select Hourly or Salary and enter your rate (e.g., "$25/hr" or "$65,000/yr").</li>
