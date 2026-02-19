@@ -353,7 +353,13 @@ export default function UserGuide() {
             The <strong>Savings Goals</strong> tab turns these big, scary future expenses into small, manageable monthly "bills." This technique is called <strong>Sinking Funds</strong>. By the time the bill is due, you have the cash sitting there waiting. No stress, no debt.
           </p>
           
-          <Placeholder label="Sinking Fund Graph Visualization" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/sinking-fund.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
 
           <h3>1. Creating a New Goal</h3>
           <p>Navigate to the Savings Goals tab (Target Icon) in the sidebar.</p>
@@ -375,7 +381,13 @@ export default function UserGuide() {
 
           <h3>2. Your Active Goals List</h3>
           <p>Once saved, your goals appear as progress cards.</p>
-          <Placeholder label="Specific Savings Goal Card: Progress Bar & Monthly Requirement" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/savings-main-page.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Progress Bar:</strong> Visualizes how close you are to 100%.</li>
@@ -393,7 +405,13 @@ export default function UserGuide() {
 
           <h4>Method B: Throwing Extra Cash</h4>
           <p>Did you get a birthday gift or sell something on Marketplace? You can throw that extra cash at a goal to reach it faster.</p>
-          <Placeholder label="'Quick Add' Modal for Adding Funds" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/savings-new-goal.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           <ol style={{ lineHeight: 1.8 }}>
             <li>On the Savings Goals page, click the small <strong>+ (Plus)</strong> button on the goal card.</li>
             <li>Select "Throw Extra Cash" and enter the amount.</li>
@@ -402,7 +420,13 @@ export default function UserGuide() {
 
           <h3>4. Editing & Priorities</h3>
           <p>Life happens. Maybe you need to raid the "Vacation Fund" to pay for a "Car Repair."</p>
-          <Placeholder label="'Edit Goal' Form" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/edit-goal.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           <ul style={{ lineHeight: 1.8 }}>
             <li><strong>Editing:</strong> Click the <strong>Pencil</strong> icon to change the Target Amount or Date. The app will instantly recalculate your new monthly payment.</li>
             <li><strong>Deleting:</strong> Click the <strong>Trash</strong> icon to remove the goal.
@@ -412,7 +436,13 @@ export default function UserGuide() {
 
           <h3>5. Completed Goals</h3>
           <p>When a progress bar hits 100%, celebrate!</p>
-          <Placeholder label="Goal at 100% Completion with Success Badge" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/paid-off.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           <ul style={{ lineHeight: 1.8 }}>
             <li>The goal moves to the <strong>Completed</strong> section at the bottom.</li>
             <li>It stops generating monthly bills on your dashboard.</li>
