@@ -129,6 +129,33 @@ export default function Settings({
     reader.readAsText(file);
   };
 
+  const handleConnectTelegram = async () => {
+    // 1. Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert("Error: Could not find user session.");
+      return;
+    }
+
+    // 2. Generate a random 8-character token
+    const linkToken = Math.random().toString(36).substring(2, 10);
+    
+    // 3. Save the token to this user's Supabase profile
+    const { error } = await supabase
+      .from('user_state')
+      .update({ telegram_link_token: linkToken })
+      .eq('id', user.id);
+
+    // 4. Redirect them to Telegram
+    if (!error) {
+      // NOTE: Replace 'OmegaBudgetApp_Bot' with your actual bot username!
+      window.location.href = `https://t.me/OmegaBudgetApp_Bot?start=${linkToken}`;
+    } else {
+      console.error(error);
+      alert("Error generating link token.");
+    }
+  };
+
   return (
     <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: 40 }}>
       <header className="page-header" style={{ marginBottom: 30 }}>
@@ -151,16 +178,23 @@ export default function Settings({
           </button>
         </div>
 
-        <div style={{ marginTop: 20, padding: 20, background: 'rgba(59, 130, 246, 0.1)', borderRadius: 12 }}>
-  <h3 style={{ margin: '0 0 10px 0', color: 'var(--accent)' }}>Quick Entry Bot</h3>
-  <p style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginBottom: 15 }}>
-    Connect your Telegram account to instantly log expenses via text message.
+
+{/* TELEGRAM BUTTON */}
+        <div style={{ marginBottom: 30, padding: 20, background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: 12 }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+    <h3 style={{ margin: 0, color: 'var(--accent)' }}>🤖 Quick Entry Bot</h3>
+  </div>
+  <p style={{ fontSize: '0.9rem', color: 'var(--text-dim)', margin: '0 0 15px 0', lineHeight: 1.5 }}>
+    Connect your Telegram account to instantly log expenses via text message without opening the app.
   </p>
-  <button onClick={handleConnectTelegram} className="btn-primary" style={{ background: '#0088cc', color: 'white' }}>
+  <button 
+    onClick={handleConnectTelegram} 
+    className="btn-primary" 
+    style={{ background: '#0088cc', color: 'white', border: 'none' }}
+  >
     Connect Telegram
   </button>
 </div>
-
 
         {/* APPEARANCE */}
         <div className="card settings-card">
