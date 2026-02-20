@@ -364,7 +364,13 @@ export default function UserGuide() {
           <h3>1. Creating a New Goal</h3>
           <p>Navigate to the Savings Goals tab (Target Icon) in the sidebar.</p>
           
-          <Placeholder label="Savings Goals Main Page: 'Add Goal' Button" />
+          <div style={{ textAlign: 'center', margin: '30px 0' }}>
+  <img 
+    src="/savings-new-goal.png" 
+    alt="Kanban Flow Diagram" 
+    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
+  />
+</div>
           
           <ol style={{ lineHeight: 1.8, marginBottom: 20 }}>
             <li>Click <strong>+ Add Goal</strong> in the top right.</li>
