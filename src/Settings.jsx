@@ -353,31 +353,36 @@ export default function Settings({
         marginTop: 20, 
         background: 'linear-gradient(145deg, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0.02) 100%)',
         border: '1px solid rgba(245, 158, 11, 0.2)',
-        alignItems: 'center' 
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-          <div style={{ background: 'rgba(245, 158, 11, 0.1)', padding: 8, borderRadius: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 15 }}>
+          <div style={{ background: 'rgba(245, 158, 11, 0.1)', padding: 8, borderRadius: 8, display: 'flex' }}>
             <Coffee size={20} color="#f59e0b" />
           </div>
           <h3 style={{ margin: 0, color: '#f59e0b' }}>Support OmegaBudget</h3>
         </div>
         
-        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: 15 }}>
+        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: 20 }}>
           OmegaBudget is built and maintained by one developer. It is 100% free, ad-free, and your data is never sold. If this app helped you get your money right this month, consider buying me a coffee to help keep the servers running!
         </p>
         
         <a 
-          href="https://buymeacoffee.com/randymccrodden" 
+          href="https://www.buymeacoffee.com/randymccrodden" 
           target="_blank" 
           rel="noopener noreferrer"
           className="btn-primary"
           style={{ 
             display: 'inline-flex', 
+            alignItems: 'center',
+            justifyContent: 'center',
             background: '#f59e0b', 
             color: '#fff',
             textDecoration: 'none',
             border: 'none',
-            alignItems: 'center'
+            padding: '10px 24px'
           }}
         >
           ☕ Buy Me a Coffee
