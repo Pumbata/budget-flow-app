@@ -376,7 +376,7 @@ export default function Settings({
             color: '#fff',
             textDecoration: 'none',
             border: 'none',
-            alignContent: 'center'
+            alignItems: 'center'
           }}
         >
           ☕ Buy Me a Coffee
