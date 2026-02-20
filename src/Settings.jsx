@@ -352,7 +352,8 @@ export default function Settings({
       <div className="card settings-card" style={{ 
         marginTop: 20, 
         background: 'linear-gradient(145deg, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0.02) 100%)',
-        border: '1px solid rgba(245, 158, 11, 0.2)' 
+        border: '1px solid rgba(245, 158, 11, 0.2)',
+        alignContent: 'center' 
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
           <div style={{ background: 'rgba(245, 158, 11, 0.1)', padding: 8, borderRadius: 8 }}>
