@@ -411,13 +411,11 @@ export default function UserGuide() {
 
           <h4>Method B: Throwing Extra Cash</h4>
           <p>Did you get a birthday gift or sell something on Marketplace? You can throw that extra cash at a goal to reach it faster.</p>
-          <div style={{ textAlign: 'center', margin: '30px 0' }}>
-  <img 
-    src="/savings-new-goal.png" 
-    alt="Kanban Flow Diagram" 
-    style={{ maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border)' }} 
-  />
-</div>
+          
+
+
+
+          
           <ol style={{ lineHeight: 1.8 }}>
             <li>On the Savings Goals page, click the small <strong>+ (Plus)</strong> button on the goal card.</li>
             <li>Select "Throw Extra Cash" and enter the amount.</li>
