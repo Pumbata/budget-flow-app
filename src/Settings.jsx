@@ -345,7 +345,7 @@ export default function Settings({
               </div>
             ))}
           </div>
-
+          </div>
 
 
           {/* TIP JAR / SUPPORT THE PROJECT */}
@@ -389,7 +389,7 @@ export default function Settings({
         </a>
       </div>
 
-        </div>
+        
 
       </div>
 
