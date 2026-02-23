@@ -1,45 +1,47 @@
-// SMART BALANCER: The "Water Level" Algorithm
-export function autoBalanceBudget(paycheck1Income, paycheck2Income, bills) {
+// SMART BALANCER: The "Infinite Water Level" Algorithm
+export function autoBalanceBudget(incomeBuckets, bills) {
+  // incomeBuckets looks like: [{ id: 'pay1', free: 1700 }, { id: 'pay2', free: 1500 }, { id: 'pay3', free: 0 }]
   
   // 1. Sort bills largest to smallest (Always place big rocks first)
   const sortedBills = [...bills].sort((a, b) => b.amount - a.amount);
+  const distributedBills = [];
   
-  const col1 = [];
-  const col2 = [];
-  
-  // Track "Remaining Free Cash" dynamically as we assign bills
-  let p1Free = paycheck1Income;
-  let p2Free = paycheck2Income;
+  // Clone buckets so we don't accidentally mutate the original data
+  const dynamicBuckets = incomeBuckets.map(b => ({ ...b }));
 
   // 2. Distribute
   sortedBills.forEach(bill => {
-    // LOGIC: Simply assign the bill to whichever paycheck currently has MORE money.
-    // This naturally lowers the high peak until it meets the low one.
+    // Sort buckets so the one with the MOST free cash is always at index 0
+    dynamicBuckets.sort((a, b) => b.free - a.free);
     
-    if (p1Free >= p2Free) {
-      col1.push({ ...bill, columnId: 'pay1' });
-      p1Free -= bill.amount;
-    } else {
-      col2.push({ ...bill, columnId: 'pay2' });
-      p2Free -= bill.amount;
-    }
+    // Grab the bucket with the highest water level
+    const targetBucket = dynamicBuckets[0];
+    
+    // Assign the bill to this bucket and subtract the cash
+    distributedBills.push({ ...bill, columnId: targetBucket.id });
+    targetBucket.free -= bill.amount;
   });
 
-  return { col1, col2 };
+  // Returns a flat array of perfectly balanced bills
+  return distributedBills; 
 }
 
-// Initial sorting (No changes here, but keeping it for the import)
-export function alignBillsByDate(payDate1, payDate2, bills) {
-  const d1 = new Date(payDate1).getDate();
-  const d2 = new Date(payDate2).getDate();
-
+// Initial sorting by Date (Upgraded to handle infinite pay dates)
+export function alignBillsByDate(payDates, bills) {
+  // payDates looks like: [{ id: 'pay1', date: 13 }, { id: 'pay2', date: 27 }]
+  
   return bills.map(bill => {
-    const dist1 = Math.abs(bill.dueDate - d1);
-    const dist2 = Math.abs(bill.dueDate - d2);
+    let closestId = payDates[0]?.id || 'pay1';
+    let minDiff = Infinity;
     
-    return { 
-      ...bill, 
-      columnId: (dist1 <= dist2) ? 'pay1' : 'pay2' 
-    };
+    payDates.forEach(pd => {
+      const diff = Math.abs(bill.dueDate - pd.date);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestId = pd.id;
+      }
+    });
+
+    return { ...bill, columnId: closestId };
   });
 }

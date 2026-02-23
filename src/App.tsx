@@ -8,7 +8,7 @@ import {
   CalendarClock, Calendar as CalendarIcon, ChevronDown, Layers, Tag, Home, Car, Zap, 
   CreditCard, Smile, ShoppingBag, Activity, HelpCircle, Landmark, Lock, Unlock, 
   LogOut, Loader2, TrendingUp, TrendingDown, DollarSign, List, ArrowRight, BookOpen,
-  ArrowUpRight, ArrowDownRight 
+  ArrowUpRight, ArrowDownRight, Scissors
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ComposedChart, Area, Line } from 'recharts';
 import { supabase } from './supabaseClient';
@@ -24,7 +24,6 @@ import Onboarding from './Onboarding';
 import Reports from './Reports';
 import Tools from './Tools';
 import UserGuide from './UserGuide';
-
 
 // --- CONSTANTS & HELPERS ---
 export const DEFAULT_CATEGORIES = { housing: { label: 'Housing', color: '#ef4444' }, transport: { label: 'Transport', color: '#f97316' }, utilities: { label: 'Utilities', color: '#eab308' }, debt: { label: 'Debt', color: '#8b5cf6' }, lifestyle: { label: 'Lifestyle', color: '#ec4899' }, shopping: { label: 'Shopping', color: '#06b6d4' }, health: { label: 'Health', color: '#10b981' }, savings: { label: 'Savings', color: '#22c55e' }, other: { label: 'Other', color: '#64748b' } };
@@ -53,7 +52,7 @@ export default function App() {
   // --- Guided Tour State (UPDATED) ---
   const [runTour, setRunTour] = useState(false);
   const [hasSeenTour, setHasSeenTour] = useState(true); 
-  const [tourStepIndex, setTourStepIndex] = useState(0); // WE CONTROL THIS NOW
+  const [tourStepIndex, setTourStepIndex] = useState(0); 
   
   // --- Data State (NEW TOPOLOGY) ---
   const [theme, setTheme] = useState('dark');
@@ -71,6 +70,7 @@ export default function App() {
   const [monthlyData, setMonthlyData] = useState({});
   const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  const [paycheckLabels, setPaycheckLabels] = useState({});
 
   // --- Modal & Form State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,6 +78,11 @@ export default function App() {
   const [modalData, setModalData] = useState({ owner: '', columnId: '', name: '', amount: '', goalId: null, category: 'other' });
   const [isClosingOpen, setIsClosingOpen] = useState(false);
   const [closingBalances, setClosingBalances] = useState({});
+  
+  // --- Split Bill State ---
+  const [isSplitOpen, setIsSplitOpen] = useState(false);
+  const [splitBillData, setSplitBillData] = useState(null);
+  const [splitAmount, setSplitAmount] = useState('');
   
   const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
   const monthLabel = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -121,6 +126,7 @@ export default function App() {
         if (data.starting_balances) setStartingBalances(data.starting_balances);
         if (data.app_start_date) setAppStartDate(data.app_start_date);
         if (data.theme) setTheme(data.theme);
+        if (data.paycheck_labels) setPaycheckLabels(data.paycheck_labels);
         
         if (data.has_seen_tour) {
           setHasSeenTour(true);
@@ -155,6 +161,7 @@ export default function App() {
         starting_balances: startingBalances,
         app_start_date: appStartDate,
         theme,
+        paycheck_labels: paycheckLabels,
         has_seen_tour: hasSeenTour, 
         updated_at: new Date()
       };
@@ -162,7 +169,7 @@ export default function App() {
       if (error) console.error('Error saving data:', error);
     };
     saveData();
-  }, [owners, hasJointPool, jointPoolName, categories, recurringBills, savingsGoals, monthlyData, startingBalances, appStartDate, theme, hasSeenTour, session]);
+  }, [owners, hasJointPool, jointPoolName, categories, recurringBills, savingsGoals, monthlyData, startingBalances, appStartDate, theme, paycheckLabels, hasSeenTour, session]);
 
   useEffect(() => { document.body.setAttribute('data-theme', theme); }, [theme]);
 
@@ -206,34 +213,107 @@ export default function App() {
        if (prevKey < appStartDate) { totalRollover += parseFloat(startingBalances[person] || 0); break; }
        const mData = monthlyData[prevKey] || { bills: [], incomes: {} };
        if (mData.closingBalances && mData.closingBalances[person] !== undefined) { totalRollover += mData.closingBalances[person]; break; }
-       const b = mData.bills || []; const inc = mData.incomes || {};
        
-       const oldSharedP1 = hasJointPool ? b.filter(x => x.owner === jointPoolName && x.columnId === 'pay1').reduce((s, x) => s + x.amount, 0) : 0;
-       const oldSharedP2 = hasJointPool ? b.filter(x => x.owner === jointPoolName && x.columnId === 'pay2').reduce((s, x) => s + x.amount, 0) : 0;
-       const oldSplit1 = hasJointPool ? oldSharedP1 / peopleCount : 0; 
-       const oldSplit2 = hasJointPool ? oldSharedP2 / peopleCount : 0;
+       const b = mData.bills || []; 
+       const inc = mData.incomes || {};
        
-       const oldInc1 = parseFloat(inc[`${person}_p1`] || 0); const oldInc2 = parseFloat(inc[`${person}_p2`] || 0); const oldIncExtra = parseFloat(inc[`${person}_extra`] || 0);
-       const oldPersP1 = b.filter(x => x.owner === person && x.columnId === 'pay1').reduce((s, x) => s + x.amount, 0); const oldPersP2 = b.filter(x => x.owner === person && x.columnId === 'pay2').reduce((s, x) => s + x.amount, 0);
-       const generatedThatMonth = (oldInc1 - (oldPersP1 + oldSplit1)) + (oldInc2 - (oldPersP2 + oldSplit2)) + oldIncExtra;
-       totalRollover += generatedThatMonth; currentKey = prevKey; 
+       let monthTotalInc = 0;
+       Object.keys(inc).forEach(k => {
+         if (k.startsWith(`${person}_p`) && !k.endsWith('_date')) monthTotalInc += parseFloat(inc[k] || 0);
+       });
+       
+       const monthPersBills = b.filter(x => x.owner === person).reduce((s, x) => s + x.amount, 0); 
+       
+       const monthSharedBills = hasJointPool ? b.filter(x => x.owner === jointPoolName).reduce((s, x) => s + x.amount, 0) : 0;
+       const monthSharedSplit = hasJointPool ? monthSharedBills / peopleCount : 0;
+       
+       const generatedThatMonth = monthTotalInc - monthPersBills - monthSharedSplit;
+       totalRollover += generatedThatMonth; 
+       currentKey = prevKey; 
     }
     return totalRollover;
   };
 
-  const sharedP1 = hasJointPool ? currentBills.filter(b => b.owner === jointPoolName && b.columnId === 'pay1').reduce((sum, b) => sum + b.amount, 0) : 0; 
-  const sharedP2 = hasJointPool ? currentBills.filter(b => b.owner === jointPoolName && b.columnId === 'pay2').reduce((sum, b) => sum + b.amount, 0) : 0; 
+  const sharedP1 = hasJointPool ? currentBills.filter(b => b.owner === jointPoolName && (b.columnId === 'pay1' || b.columnId === 'p1')).reduce((sum, b) => sum + b.amount, 0) : 0; 
+  const sharedP2 = hasJointPool ? currentBills.filter(b => b.owner === jointPoolName && (b.columnId === 'pay2' || b.columnId === 'p2')).reduce((sum, b) => sum + b.amount, 0) : 0; 
   const splitP1 = hasJointPool ? sharedP1 / peopleCount : 0; 
   const splitP2 = hasJointPool ? sharedP2 / peopleCount : 0;
 
   const getPersonStats = (person) => { 
-    const inc1 = parseFloat(currentIncomes[`${person}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${person}_p2`] || 0); const incExtra = parseFloat(currentIncomes[`${person}_extra`] || 0); 
+    const activeColumnsRaw = Object.keys(currentIncomes)
+      .filter(k => k.startsWith(`${person}_p`) && !k.endsWith('_date'))
+      .map(k => k.split('_')[1]); 
+
+    let columnsToCheck = activeColumnsRaw.length > 0 ? activeColumnsRaw.map(c => c.replace('p', 'pay')) : ['pay1', 'pay2'];
+    columnsToCheck.sort((a, b) => parseInt(a.replace('pay', '')) - parseInt(b.replace('pay', '')));
+
+    let totalInc = 0;
+    let totalDue = 0;
+    let totalFree = 0;
+
     const pBills = currentBills.filter(b => b.owner === person); 
-    const myPersP1 = pBills.filter(b => b.columnId === 'pay1').reduce((sum, b) => sum + b.amount, 0); const myPersP2 = pBills.filter(b => b.columnId === 'pay2').reduce((sum, b) => sum + b.amount, 0); 
-    const due1 = myPersP1 + splitP1; const due2 = myPersP2 + splitP2; 
-    const free1 = inc1 - due1; const free2 = inc2 - due2; const rollover = getRollover(monthKey, person); 
-    const totalFree = free1 + free2 + incExtra + rollover; 
-    return { free1, free2, incExtra, rollover, totalFree, due1, due2 }; 
+    const rollover = getRollover(monthKey, person); 
+
+    const columnStats = {};
+    columnsToCheck.forEach(col => {
+      const incKey = col.replace('pay', 'p');
+      const inc = parseFloat(currentIncomes[`${person}_${incKey}`] || 0);
+      
+      const persBills = pBills.filter(b => b.columnId === col || b.columnId === incKey).reduce((sum, b) => sum + b.amount, 0);
+      const sharedSplit = hasJointPool ? (currentBills.filter(b => b.owner === jointPoolName && (b.columnId === col || b.columnId === incKey)).reduce((sum, b) => sum + b.amount, 0) / peopleCount) : 0;
+      
+      const due = persBills + sharedSplit;
+      const free = inc - due;
+
+      columnStats[col] = { due, free };
+      totalInc += inc;
+      totalDue += due;
+    });
+
+    totalFree = totalInc - totalDue + rollover; 
+    
+    return { 
+      rollover, totalFree, 
+      columnStats, 
+      due1: columnStats['pay1']?.due || 0, 
+      due2: columnStats['pay2']?.due || 0,
+      columns: columnsToCheck 
+    }; 
+  };
+
+  const handleAddPaycheck = (owner) => {
+    const stats = getPersonStats(owner);
+    let maxNum = 0;
+    stats.columns.forEach(c => {
+      const num = parseInt(c.replace('pay', ''));
+      if (num > maxNum) maxNum = num;
+    });
+    const nextColNumber = maxNum + 1;
+    handleIncomeChange(owner, `p${nextColNumber}`, 0); 
+  };
+
+  const handleDeletePaycheck = (owner, col) => {
+    const customLabel = paycheckLabels[`${monthKey}_${owner}_${col}`] || col;
+    if (window.confirm(`Are you sure you want to remove "${customLabel}"? Any bills currently in this column will be moved to Paycheck 1.`)) {
+      const incKey = col.replace('pay', 'p');
+      
+      const updatedBills = currentBills.map(b => {
+        if (b.owner === owner && (b.columnId === col || b.columnId === incKey)) {
+          return { ...b, columnId: 'pay1' };
+        }
+        return b;
+      });
+
+      const newIncomes = { ...currentIncomes };
+      delete newIncomes[`${owner}_${incKey}`];
+      delete newIncomes[`${owner}_${incKey}_date`];
+
+      const newLabels = { ...paycheckLabels };
+      delete newLabels[`${monthKey}_${owner}_${col}`];
+      setPaycheckLabels(newLabels);
+      
+      updateCurrentMonth(updatedBills, newIncomes);
+    }
   };
 
   const generatePieData = () => { /* chart logic omitted for brevity, keeping existing */
@@ -269,24 +349,48 @@ export default function App() {
     return filteredData.map(item => ({ ...item, share: totalValue > 0 ? (item.value / totalValue) : 0 })); 
   };
   
-  const generateIncomeVsExpenseData = () => { /* chart logic omitted for brevity, keeping existing */
+  const generateIncomeVsExpenseData = () => { 
     if (cashFlowFilter === 'All') { 
       let totalIncome = 0; let totalExpenses = currentBills.reduce((sum, b) => sum + b.amount, 0); 
       owners.forEach(owner => { 
-        const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); const extra = parseFloat(currentIncomes[`${owner}_extra`] || 0); const rollover = getRollover(monthKey, owner); 
-        totalIncome += (inc1 + inc2 + extra + (rollover > 0 ? rollover : 0)); 
+        const rollover = getRollover(monthKey, owner); 
+        let ownerInc = 0;
+        Object.keys(currentIncomes).forEach(k => {
+          if (k.startsWith(`${owner}_p`) && !k.endsWith('_date')) ownerInc += parseFloat(currentIncomes[k] || 0);
+        });
+        totalIncome += (ownerInc + (rollover > 0 ? rollover : 0)); 
       }); 
       return [ { name: 'Total In', amount: totalIncome, fill: '#22c55e' }, { name: 'Total Out', amount: totalExpenses, fill: '#ef4444' }, { name: 'Net', amount: totalIncome - totalExpenses, fill: '#3b82f6' } ]; 
     } else { 
       const owner = cashFlowFilter; const stats = getPersonStats(owner); 
-      const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); const extra = parseFloat(currentIncomes[`${owner}_extra`] || 0); const rollover = getRollover(monthKey, owner); 
-      const myIncome = inc1 + inc2 + extra + (rollover > 0 ? rollover : 0); const myFixedCosts = stats.due1 + stats.due2; 
+      const rollover = getRollover(monthKey, owner); 
+      let myIncome = (rollover > 0 ? rollover : 0);
+      Object.keys(currentIncomes).forEach(k => {
+        if (k.startsWith(`${owner}_p`) && !k.endsWith('_date')) myIncome += parseFloat(currentIncomes[k] || 0);
+      });
+      const myFixedCosts = Object.values(stats.columnStats).reduce((sum, col) => sum + col.due, 0);
       return [ { name: 'My Income', amount: myIncome, fill: '#22c55e' }, { name: 'My Costs', amount: myFixedCosts, fill: '#ef4444' }, { name: 'My Net', amount: myIncome - myFixedCosts, fill: '#3b82f6' } ]; 
     } 
   };
 
-  const generateBurdenData = () => owners.map(owner => { const stats = getPersonStats(owner); return { name: owner, Fixed: stats.due1 + stats.due2, Free: stats.totalFree }; });
-  const generateTrendData = () => { const keys = Object.keys(monthlyData).sort(); const recentKeys = keys.slice(-6); return recentKeys.map(key => { const mData = monthlyData[key]; const b = mData.bills || []; const inc = mData.incomes || {}; let mIncome = 0; let mExpenses = b.reduce((sum, item) => sum + item.amount, 0); owners.forEach(owner => { mIncome += (parseFloat(inc[`${owner}_p1`] || 0) + parseFloat(inc[`${owner}_p2`] || 0) + parseFloat(inc[`${owner}_extra`] || 0)); }); const [y, m] = key.split('-'); return { name: new Date(y, m - 1).toLocaleString('default', { month: 'short' }), Income: mIncome, Expenses: mExpenses }; }); };
+  const generateBurdenData = () => owners.map(owner => { 
+    const stats = getPersonStats(owner); 
+    const totalFixed = Object.values(stats.columnStats).reduce((sum, col) => sum + col.due, 0);
+    return { name: owner, Fixed: totalFixed, Free: stats.totalFree }; 
+  });
+  const generateTrendData = () => { 
+    const keys = Object.keys(monthlyData).sort(); const recentKeys = keys.slice(-6); 
+    return recentKeys.map(key => { 
+      const mData = monthlyData[key]; const b = mData.bills || []; const inc = mData.incomes || {}; 
+      let mIncome = 0; let mExpenses = b.reduce((sum, item) => sum + item.amount, 0); 
+      owners.forEach(owner => { 
+        Object.keys(inc).forEach(k => {
+          if (k.startsWith(`${owner}_p`) && !k.endsWith('_date')) mIncome += parseFloat(inc[k] || 0);
+        });
+      }); 
+      const [y, m] = key.split('-'); return { name: new Date(y, m - 1).toLocaleString('default', { month: 'short' }), Income: mIncome, Expenses: mExpenses }; 
+    }); 
+  };
   const CustomTooltip = ({ active, payload }) => { if (active && payload && payload.length) { const item = payload[0]; const originalData = item.payload; return ( <div className="chart-tooltip"> <p className="label">{item.name || item.dataKey}</p> <p className="value">${item.value.toFixed(0)}</p> {originalData.share !== undefined && ( <p style={{fontSize: '0.85rem', color: 'var(--accent)', marginTop: 4, fontWeight: 600}}> {(originalData.share * 100).toFixed(1)}% </p> )} </div> ); } return null; };
   const renderChartContent = (type) => { if (type === 'breakdown') { return ( <ResponsiveContainer width="100%" height="100%"> <PieChart> <Pie data={generatePieData()} cx="50%" cy="50%" innerRadius="45%" outerRadius="70%" paddingAngle={5} dataKey="value"> {generatePieData().map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)} </Pie> <Tooltip content={<CustomTooltip />} isAnimationActive={false} /> <Legend verticalAlign="bottom" height={36}/> </PieChart> </ResponsiveContainer> ); } if (type === 'cashflow') { return ( <ResponsiveContainer width="100%" height="100%"> <BarChart data={generateIncomeVsExpenseData()} margin={{top: 20, right: 30, left: 0, bottom: 5}}> <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/> <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false}/> <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`}/> <Tooltip content={<CustomTooltip />} cursor={{fill: 'var(--bg)'}} isAnimationActive={false}/> <Bar dataKey="amount" radius={[4, 4, 0, 0]}> {generateIncomeVsExpenseData().map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)} </Bar> </BarChart> </ResponsiveContainer> ); } if (type === 'burden') { return ( <ResponsiveContainer width="100%" height="100%"> <BarChart data={generateBurdenData()} margin={{top: 20, right: 30, left: 0, bottom: 5}}> <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/> <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false}/> <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`}/> <Tooltip content={<CustomTooltip />} cursor={{fill: 'var(--bg)'}} isAnimationActive={false}/> <Legend verticalAlign="top" height={36}/> <Bar dataKey="Fixed" stackId="a" fill="#ef4444" radius={[0, 0, 4, 4]} name="Fixed Bills"/> <Bar dataKey="Free" stackId="a" fill="#22c55e" radius={[4, 4, 0, 0]} name="Free Cash"/> </BarChart> </ResponsiveContainer> ); } if (type === 'trend') { return ( <ResponsiveContainer width="100%" height="100%"> <ComposedChart data={generateTrendData()} margin={{top: 20, right: 30, left: 0, bottom: 5}}> <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/> <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false}/> <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`}/> <Tooltip content={<CustomTooltip />} isAnimationActive={false} /> <Legend verticalAlign="top" height={36}/> <Area type="monotone" dataKey="Income" fill="rgba(34, 197, 94, 0.1)" stroke="#22c55e" strokeWidth={2} name="Total Income"/> <Line type="monotone" dataKey="Expenses" stroke="#ef4444" strokeWidth={2} dot={{r: 4}} name="Total Expenses"/> </ComposedChart> </ResponsiveContainer> ); } };
 
@@ -300,19 +404,37 @@ export default function App() {
   const handleIncomeChange = (owner, period, value) => updateCurrentMonth(undefined, { ...currentIncomes, [`${owner}_${period}`]: value });
   const onDragEnd = (result) => { if (!result.destination) return; const { draggableId, destination } = result; const destParts = destination.droppableId.split('-'); const newColumnId = destParts.pop(); const newOwner = destParts.join('-'); const newBills = currentBills.map(bill => { if (bill.snapshotId === draggableId) { return { ...bill, columnId: newColumnId, owner: newOwner, originalOwner: bill.originalOwner || bill.owner }; } return bill; }); updateCurrentMonth(newBills, undefined); };
   
-  const handleSectionBalance = (targetOwner) => { const ownerBills = currentBills.filter(b => b.owner === targetOwner); const otherBills = currentBills.filter(b => b.owner !== targetOwner); let inc1 = 0, inc2 = 0; if (targetOwner !== jointPoolName) { inc1 = parseFloat(currentIncomes[`${targetOwner}_p1`] || 0); inc2 = parseFloat(currentIncomes[`${targetOwner}_p2`] || 0); } const { col1, col2 } = autoBalanceBudget(inc1, inc2, ownerBills); updateCurrentMonth([...otherBills, ...col1, ...col2], undefined); };
+  const handleSectionBalance = (targetOwner) => { 
+    const ownerBills = currentBills.filter(b => b.owner === targetOwner); 
+    const otherBills = currentBills.filter(b => b.owner !== targetOwner); 
+    const stats = getPersonStats(targetOwner);
+    const incomeBuckets = stats.columns.map(col => {
+      const incKey = col.replace('pay', 'p');
+      const freeCash = targetOwner === jointPoolName ? 0 : parseFloat(currentIncomes[`${targetOwner}_${incKey}`] || 0);
+      return { id: col, free: freeCash };
+    });
+    const balancedBills = autoBalanceBudget(incomeBuckets, ownerBills); 
+    updateCurrentMonth([...otherBills, ...balancedBills], undefined); 
+  };
+
   const handleBalanceEverything = () => { 
     let allBalancedBills = []; 
     if (hasJointPool) {
       const sharedBills = currentBills.filter(b => b.owner === jointPoolName); 
-      const sharedBalanced = autoBalanceBudget(0, 0, sharedBills); 
-      allBalancedBills.push(...sharedBalanced.col1, ...sharedBalanced.col2); 
+      const stats = getPersonStats(jointPoolName);
+      const incomeBuckets = stats.columns.map(col => ({ id: col, free: 0 }));
+      const sharedBalanced = autoBalanceBudget(incomeBuckets, sharedBills); 
+      allBalancedBills.push(...sharedBalanced); 
     }
     owners.forEach(owner => { 
       const ownerBills = currentBills.filter(b => b.owner === owner); 
-      const inc1 = parseFloat(currentIncomes[`${owner}_p1`] || 0); const inc2 = parseFloat(currentIncomes[`${owner}_p2`] || 0); 
-      const ownerBalanced = autoBalanceBudget(inc1, inc2, ownerBills); 
-      allBalancedBills.push(...ownerBalanced.col1, ...ownerBalanced.col2); 
+      const stats = getPersonStats(owner);
+      const incomeBuckets = stats.columns.map(col => {
+        const incKey = col.replace('pay', 'p');
+        return { id: col, free: parseFloat(currentIncomes[`${owner}_${incKey}`] || 0) };
+      });
+      const ownerBalanced = autoBalanceBudget(incomeBuckets, ownerBills); 
+      allBalancedBills.push(...ownerBalanced); 
     }); 
     const knownEntities = hasJointPool ? [jointPoolName, ...owners] : owners;
     const unknownBills = currentBills.filter(b => !knownEntities.includes(b.owner)); 
@@ -335,6 +457,49 @@ export default function App() {
   const openExtraSavingsModal = (goal) => { setModalType('extraSavings'); setModalData({ owner: goal.owner, columnId: 'pay1', name: `Extra: ${goal.name}`, amount: '', goalId: goal.id, category: 'savings' }); setIsModalOpen(true); };
   const changeMonth = (offset) => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + offset); setCurrentDate(newDate); };
   
+  // --- Split Bill Actions ---
+  const openSplitModal = (bill) => {
+    setSplitBillData(bill);
+    setSplitAmount('');
+    setIsSplitOpen(true);
+  };
+
+  const handleSplitSubmit = (e) => {
+    e.preventDefault();
+    const amountToSplit = parseFloat(splitAmount);
+    
+    if (isNaN(amountToSplit) || amountToSplit <= 0 || amountToSplit >= splitBillData.amount) {
+      alert("Please enter a valid amount less than the total bill.");
+      return;
+    }
+
+    // 1. Create the new cloned chunk
+    const newClonedBill = {
+      ...splitBillData,
+      id: `split-${Date.now()}`, // Break the connection to the master recurring bill so syncing doesn't overwrite it
+      snapshotId: `split-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      name: `${splitBillData.name} (Part 2)`,
+      amount: amountToSplit,
+      isPaid: false
+    };
+
+    // 2. Reduce the original bill's amount
+    const updatedBills = currentBills.map(b => {
+      if (b.snapshotId === splitBillData.snapshotId) {
+        // Automatically rename the original so it's clear it was split
+        const originalName = b.name.includes('(Part') ? b.name : `${b.name} (Part 1)`;
+        return { ...b, amount: b.amount - amountToSplit, name: originalName };
+      }
+      return b;
+    });
+
+    // 3. Save it all
+    updateCurrentMonth([...updatedBills, newClonedBill], undefined);
+    setIsSplitOpen(false);
+    setSplitBillData(null);
+    setSplitAmount('');
+  };
+
   const handleOnboardingComplete = ({ finalOwners, hasJointPool, jointPoolName, finalBills }) => {
     setOwners(finalOwners);
     setHasJointPool(hasJointPool);
@@ -342,7 +507,6 @@ export default function App() {
     setRecurringBills(finalBills);
     setShowOnboarding(false);
     
-    // Trigger the tour
     if (!hasSeenTour) {
       setTourStepIndex(0);
       setRunTour(true);
@@ -363,28 +527,22 @@ export default function App() {
     { target: '.tour-close-books', content: "At the end of the month, click here to 'Close Books'. You'll confirm your actual bank balance, and any extra money rolls over into next month!", placement: 'bottom' },
     { target: '.tour-sync', content: "Got new regular expenses? The 'Sync' button pulls fresh master bills straight into your current month.", placement: 'bottom' },
     { target: '.tour-nav-bills', content: "Speaking of your master list, let's head over to the Recurring Bills tab to set that up.", placement: 'right' },
-    // -- VIEW SWITCHES TO 'BILLS' HERE --
     { target: '.tour-add-bill', content: "Welcome to the Blueprint! Click 'Add Bill' to input all your standard monthly expenses.", placement: 'bottom' },
     { target: '.tour-blueprint-list', content: "Once added, they live here forever. Your dashboard will copy these every single month so you never have to type them twice. You're all set!", placement: 'top' }
   ];
 
   const handleJoyrideCallback = (data) => {
     const { action, index, status, type } = data;
-
-    // Reacting to a step changing
     if (type === 'step:after') {
       if (action === 'next' || action === 'close') {
-        // If they just finished Step 5 (Sidebar link to Recurring Bills)
         if (index === 5) {
-          setView('bills'); // Change the React state to show the new page
-          // Wait 100ms for the DOM to render the new page before firing the next tour step
+          setView('bills');
           setTimeout(() => setTourStepIndex(index + 1), 100);
         } else {
-          setTourStepIndex(index + 1); // Normal next step
+          setTourStepIndex(index + 1); 
         }
       } 
       else if (action === 'prev') {
-        // If they click 'Back' while on the first step of the Bills page
         if (index === 6) {
           setView('dashboard');
           setTimeout(() => setTourStepIndex(index - 1), 100);
@@ -393,17 +551,14 @@ export default function App() {
         }
       }
     }
-
-    // When the tour is totally done or skipped
     const finishedStatuses = [STATUS.FINISHED, STATUS.SKIPPED];
     if (finishedStatuses.includes(status)) {
       setRunTour(false);
       setHasSeenTour(true);
-      setTourStepIndex(0); // Reset for the next time they hit "Replay"
-      setView('dashboard'); // Teleport them back home
+      setTourStepIndex(0); 
+      setView('dashboard'); 
     }
   };
-
 
   // ==========================================
   // 4. RENDER GATE (MUST BE LAST)
@@ -443,7 +598,7 @@ export default function App() {
       <Joyride
         steps={tourSteps}
         run={runTour}
-        stepIndex={tourStepIndex} /* THIS IS NEW - IT LETS US CONTROL THE PAUSING/PLAYING */
+        stepIndex={tourStepIndex}
         continuous={true}
         showSkipButton={true}
         showProgress={true}
@@ -466,13 +621,13 @@ export default function App() {
         <div className="logo"><img src="/logo.png" alt="OmegaBudget Logo" style={{ width: '28px', height: '28px' }} /><span>OmegaBudget</span></div>
         <button className={`nav-item ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}><LayoutDashboard size={20} /> Dashboard</button>
         <button className={`nav-item ${view === 'forecast' ? 'active' : ''}`} onClick={() => setView('forecast')}><CalendarClock size={20} /> Forecast</button>
-        {/* ADDED TARGET CLASS: tour-nav-bills */}
         <button className={`nav-item tour-nav-bills ${view === 'bills' ? 'active' : ''}`} onClick={() => setView('bills')}><Receipt size={20} /> Recurring Bills</button>
         <button className={`nav-item ${view === 'goals' ? 'active' : ''}`} onClick={() => setView('goals')}><Target size={20} /> Savings Goals</button>
         <button className={`nav-item ${view === 'reports' ? 'active' : ''}`} onClick={() => setView('reports')}><Activity size={20} /> Reports</button>
         <button className={`nav-item ${view === 'tools' ? 'active' : ''}`} onClick={() => setView('tools')}><Calculator size={20} /> Tools</button>
         <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}><SettingsIcon size={20} /> Settings</button>
-        <button className={`nav-item ${view === 'guide' ? 'active' : ''}`} onClick={() => setView('guide')}><BookOpen size={20} /> Guide</button>        <button className="nav-item" onClick={handleSignOut} style={{marginTop: 'auto', color: 'var(--red)'}}><LogOut size={20} /> Sign Out</button>
+        <button className={`nav-item ${view === 'guide' ? 'active' : ''}`} onClick={() => setView('guide')}><BookOpen size={20} /> Guide</button>        
+        <button className="nav-item" onClick={handleSignOut} style={{marginTop: 'auto', color: 'var(--red)'}}><LogOut size={20} /> Sign Out</button>
       </nav>
 
       <main className="main-content">
@@ -486,7 +641,6 @@ export default function App() {
                   {!isMonthClosed ? (<button className="btn-close-books tour-close-books" onClick={openClosingModal}><CheckSquare size={16} /> Close Books</button>) : (<button className="btn-reopen-books" onClick={handleReopenBooks}><Unlock size={16} /> Re-open Books</button>)}
                   <div className="view-toggle"><button className={dashboardMode === 'board' ? 'active' : ''} onClick={() => setDashboardMode('board')}><Kanban size={16}/> Board</button><button className={dashboardMode === 'charts' ? 'active' : ''} onClick={() => setDashboardMode('charts')}><PieChartIcon size={16}/> Charts</button></div>
                   
-                  {/* ADDED TARGET CLASS: tour-sync */}
                   <button className="btn-sync tour-sync" onClick={handleSyncBlueprint} title="Pull updates from Master Blueprints"><RefreshCcw size={16} /> Sync</button>
                   <button className="btn-balance-all tour-balance-all" onClick={handleBalanceEverything}><RefreshCw size={18} /> Balance All</button>
                 </div>
@@ -525,25 +679,54 @@ export default function App() {
                     {owners.map(owner => (
                       <div key={owner} className="person-income-card">
                         <div className="person-header"><div style={{display:'flex', alignItems:'center', gap:8}}><User size={18}/> {owner}</div><div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end'}}>{getPersonStats(owner).rollover !== 0 && (<span style={{fontSize: '0.75rem', color: getPersonStats(owner).rollover > 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600, marginBottom: 2}}>{getPersonStats(owner).rollover > 0 ? '+' : ''}${getPersonStats(owner).rollover.toFixed(0)} Rolled Over</span>)}<span className={`free-cash-badge ${getPersonStats(owner).totalFree < 0 ? 'neg' : 'pos'}`}>Total Free: ${getPersonStats(owner).totalFree.toFixed(0)}</span></div></div>
-                        <div className="income-inputs">
-                          <div className="inp-group">
-                            <div style={{display: 'flex', justifyContent:'space-between', alignItems:'center'}}><label>Check 1</label><DayPicker value={currentIncomes[`${owner}_p1_date`]} onChange={(day) => handleIncomeChange(owner, 'p1_date', day)} /></div>
-                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}><span style={{ position: 'absolute', left: 10, color: 'var(--text-dim)' }}>$</span><input type="number" style={{ paddingLeft: 25, width: '100%', boxSizing: 'border-box' }} value={currentIncomes[`${owner}_p1`] || ''} placeholder="0" onChange={(e) => handleIncomeChange(owner, 'p1', e.target.value)} /></div>
-                            <div className="stats-stack"><div className="mini-due">Due: -${getPersonStats(owner).due1.toFixed(0)}</div><div className={`mini-free ${getPersonStats(owner).free1 < 0 ? 'neg' : 'pos'}`}>Free: ${getPersonStats(owner).free1.toFixed(0)}</div></div>
-                          </div>
+                        
+                        {/* THE STRICT 2-COLUMN GRID SYSTEM */}
+                        <div className="income-inputs" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '15px', width: '100%' }}>
+                          {getPersonStats(owner).columns.map((col, index) => {
+                            const incKey = col.replace('pay', 'p');
+                            return (
+                              <div key={col} className="inp-group" style={{ minWidth: 0, boxSizing: 'border-box' }}>
+                                <div style={{display: 'flex', justifyContent:'space-between', alignItems:'center'}}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <input 
+                                      type="text"
+                                      className="editable-label"
+                                      value={paycheckLabels[`${monthKey}_${owner}_${col}`] || `Check ${index + 1}`}
+                                      onChange={(e) => setPaycheckLabels({...paycheckLabels, [`${monthKey}_${owner}_${col}`]: e.target.value})}
+                                      style={{ background: 'transparent', border: 'none', borderBottom: '1px dashed var(--accent)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', width: '75px', padding: 0 }}
+                                    />
+                                    {col !== 'pay1' && (
+                                      <button className="btn-icon-only" onClick={() => handleDeletePaycheck(owner, col)} title="Remove Paycheck" style={{ padding: 2, border: 'none', background: 'transparent' }}>
+                                        <X size={14} color="var(--red)" />
+                                      </button>
+                                    )}
+                                  </div>
+                                  <DayPicker value={currentIncomes[`${owner}_${incKey}_date`]} onChange={(day) => handleIncomeChange(owner, `${incKey}_date`, day)} />
+                                </div>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginTop: 4 }}>
+                                  <span style={{ position: 'absolute', left: 10, color: 'var(--text-dim)' }}>$</span>
+                                  <input type="number" style={{ paddingLeft: 25, width: '100%', boxSizing: 'border-box' }} value={currentIncomes[`${owner}_${incKey}`] || ''} placeholder="0" onChange={(e) => handleIncomeChange(owner, incKey, e.target.value)} />
+                                </div>
+                                <div className="stats-stack" style={{ marginTop: 4 }}>
+                                  <div className="mini-due">Due: -${(getPersonStats(owner).columnStats[col]?.due || 0).toFixed(0)}</div>
+                                  <div className={`mini-free ${(getPersonStats(owner).columnStats[col]?.free || 0) < 0 ? 'neg' : 'pos'}`}>Free: ${(getPersonStats(owner).columnStats[col]?.free || 0).toFixed(0)}</div>
+                                </div>
+                              </div>
+                            )
+                          })}
 
-                          <div className="inp-group">
-                            <div style={{display: 'flex', justifyContent:'space-between', alignItems:'center'}}><label>Check 2</label><DayPicker value={currentIncomes[`${owner}_p2_date`]} onChange={(day) => handleIncomeChange(owner, 'p2_date', day)} /></div>
-                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}><span style={{ position: 'absolute', left: 10, color: 'var(--text-dim)' }}>$</span><input type="number" style={{ paddingLeft: 25, width: '100%', boxSizing: 'border-box' }} value={currentIncomes[`${owner}_p2`] || ''} placeholder="0" onChange={(e) => handleIncomeChange(owner, 'p2', e.target.value)} /></div>
-                            <div className="stats-stack"><div className="mini-due">Due: -${getPersonStats(owner).due2.toFixed(0)}</div><div className={`mini-free ${getPersonStats(owner).free2 < 0 ? 'neg' : 'pos'}`}>Free: ${getPersonStats(owner).free2.toFixed(0)}</div></div>
-                          </div>
-
-                          <div className="inp-group">
-                            <label style={{color: 'var(--accent)'}}>Extra</label>
-                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}><span style={{ position: 'absolute', left: 10, color: 'var(--accent)' }}>$</span><input type="number" style={{ paddingLeft: 25, width: '100%', boxSizing: 'border-box', borderColor: 'var(--accent)' }} value={currentIncomes[`${owner}_extra`] || ''} placeholder="0" onChange={(e) => handleIncomeChange(owner, 'extra', e.target.value)} /></div>
-                            <div className="stats-stack"><div className="mini-due">&nbsp;</div><div className={`mini-free ${getPersonStats(owner).incExtra < 0 ? 'neg' : 'pos'}`}>+ ${getPersonStats(owner).incExtra.toFixed(0)}</div></div>
+                          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', marginTop: '5px' }}>
+                            <button 
+                              className="btn-add-quick" 
+                              onClick={() => handleAddPaycheck(owner)} 
+                              title="Add another paycheck cycle for this month" 
+                              style={{ padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', background: 'var(--bg)', border: '1px dashed var(--border)', color: 'var(--text)', borderRadius: '6px', cursor: 'pointer' }}
+                            >
+                              <Plus size={14} color="var(--text-dim)" /> Add Income
+                            </button>
                           </div>
                         </div>
+
                       </div>
                     ))}
                   </div>
@@ -565,10 +748,44 @@ export default function App() {
                             )}
                           </div>
                         } 
-                        owner={jointPoolName} bills={currentBills} isShared={true} onTogglePaid={togglePaid} onDelete={deleteFromDashboard} onAddOneTime={openOneTimeModal} onBalance={handleSectionBalance} onAddTodo={(text, col) => handleAddTodo(text, jointPoolName, col)} todos={currentTodos.filter(t => t.owner === jointPoolName)} onToggleTodo={handleToggleTodo} onDeleteTodo={handleDeleteTodo} 
+                        owner={jointPoolName} 
+                        bills={currentBills} 
+                        isShared={true} 
+                        onTogglePaid={togglePaid} 
+                        onDelete={deleteFromDashboard} 
+                        onAddOneTime={openOneTimeModal} 
+                        onBalance={handleSectionBalance} 
+                        onAddTodo={(text, col) => handleAddTodo(text, jointPoolName, col)} 
+                        todos={currentTodos.filter(t => t.owner === jointPoolName)} 
+                        onToggleTodo={handleToggleTodo} 
+                        onDeleteTodo={handleDeleteTodo} 
+                        activeColumns={getPersonStats(jointPoolName).columns}
+                        paycheckLabels={paycheckLabels}
+                        monthKey={monthKey}
+                        onSplit={openSplitModal}
                       />
                     )}
-                    {owners.map(owner => (<BalanceSection key={owner} title={`👤 ${owner}'s Bills`} owner={owner} bills={currentBills} isShared={false} onTogglePaid={togglePaid} onDelete={deleteFromDashboard} onAddOneTime={openOneTimeModal} onBalance={handleSectionBalance} onAddTodo={(text, col) => handleAddTodo(text, owner, col)} todos={currentTodos.filter(t => t.owner === owner)} onToggleTodo={handleToggleTodo} onDeleteTodo={handleDeleteTodo} />))}
+                    {owners.map(owner => (
+                      <BalanceSection 
+                        key={owner} 
+                        title={`👤 ${owner}'s Bills`} 
+                        owner={owner} 
+                        bills={currentBills} 
+                        isShared={false} 
+                        onTogglePaid={togglePaid} 
+                        onDelete={deleteFromDashboard} 
+                        onAddOneTime={openOneTimeModal} 
+                        onBalance={handleSectionBalance} 
+                        onAddTodo={(text, col) => handleAddTodo(text, owner, col)} 
+                        todos={currentTodos.filter(t => t.owner === owner)} 
+                        onToggleTodo={handleToggleTodo} 
+                        onDeleteTodo={handleDeleteTodo} 
+                        activeColumns={getPersonStats(owner).columns}
+                        paycheckLabels={paycheckLabels}
+                        monthKey={monthKey}
+                        onSplit={openSplitModal}
+                      />
+                    ))}
                   </DragDropContext>
                 </div>
               </>
@@ -586,7 +803,67 @@ export default function App() {
       </main>
 
       {/* MODALS */}
-      {isModalOpen && (<div className="modal-overlay"><div className="modal-card animate-fade-in"><div className="modal-header"><h3 style={{margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8}}>{modalType === 'onetime' ? <Plus size={20}/> : <Target size={20}/>} {modalType === 'onetime' ? 'Add One-Time Bill' : 'Throw Extra Cash'}</h3><button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button></div><form onSubmit={handleModalSubmit} className="add-bill-form"><p className="subtitle" style={{marginBottom: 20, marginTop: 0}}>{modalType === 'onetime' ? `Adding to ${modalData.owner}'s check.` : `How much extra are you putting towards ${modalData.name.replace('Extra: ', '')}?`}</p>{modalType === 'onetime' && (<input autoFocus className="input-field" placeholder="What is the expense?" value={modalData.name} onChange={(e) => setModalData({ ...modalData, name: e.target.value })} />)}<div className="form-row"><input type="number" autoFocus={modalType !== 'onetime'} className="input-field" placeholder="Amount ($)" value={modalData.amount} onChange={(e) => setModalData({ ...modalData, amount: e.target.value })} /><select className="input-field" value={modalData.columnId} onChange={(e) => setModalData({ ...modalData, columnId: e.target.value })}><option value="pay1">From Paycheck 1</option><option value="pay2">From Paycheck 2</option></select></div>{modalType === 'onetime' && (<div style={{marginTop: 10}}><select className="input-field" value={modalData.category} onChange={e => setModalData({...modalData, category: e.target.value})}>{Object.entries(categories).map(([key, cat]) => (<option key={key} value={key}>{cat.label}</option>))}</select></div>)}<div className="form-actions" style={{justifyContent: 'flex-end', marginTop: 15}}><button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="btn-primary">{modalType === 'onetime' ? 'Add Expense' : 'Add Payment'}</button></div></form></div></div>)}
+      {isModalOpen && (<div className="modal-overlay"><div className="modal-card animate-fade-in"><div className="modal-header"><h3 style={{margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8}}>{modalType === 'onetime' ? <Plus size={20}/> : <Target size={20}/>} {modalType === 'onetime' ? 'Add One-Time Bill' : 'Throw Extra Cash'}</h3><button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button></div><form onSubmit={handleModalSubmit} className="add-bill-form"><p className="subtitle" style={{marginBottom: 20, marginTop: 0}}>{modalType === 'onetime' ? `Adding to ${modalData.owner}'s check.` : `How much extra are you putting towards ${modalData.name.replace('Extra: ', '')}?`}</p>{modalType === 'onetime' && (<input autoFocus className="input-field" placeholder="What is the expense?" value={modalData.name} onChange={(e) => setModalData({ ...modalData, name: e.target.value })} />)}<div className="form-row"><input type="number" autoFocus={modalType !== 'onetime'} className="input-field" placeholder="Amount ($)" value={modalData.amount} onChange={(e) => setModalData({ ...modalData, amount: e.target.value })} /><select className="input-field" value={modalData.columnId} onChange={(e) => setModalData({ ...modalData, columnId: e.target.value })}>
+        {modalData.owner && getPersonStats(modalData.owner).columns.map((col, index) => (
+          <option key={col} value={col}>
+            From {paycheckLabels[`${monthKey}_${modalData.owner}_${col}`] || `Check ${index + 1}`}
+          </option>
+        ))}
+        {!modalData.owner && (
+          <>
+            <option value="pay1">From Paycheck 1</option>
+            <option value="pay2">From Paycheck 2</option>
+          </>
+        )}
+      </select></div>{modalType === 'onetime' && (<div style={{marginTop: 10}}><select className="input-field" value={modalData.category} onChange={e => setModalData({...modalData, category: e.target.value})}>{Object.entries(categories).map(([key, cat]) => (<option key={key} value={key}>{cat.label}</option>))}</select></div>)}<div className="form-actions" style={{justifyContent: 'flex-end', marginTop: 15}}><button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="btn-primary">{modalType === 'onetime' ? 'Add Expense' : 'Add Payment'}</button></div></form></div></div>)}
+      
+      {/* NEW: THE SPLIT BILL MODAL */}
+      {isSplitOpen && splitBillData && (
+        <div className="modal-overlay">
+          <div className="modal-card animate-fade-in">
+            <div className="modal-header">
+              <h3 style={{margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8}}>
+                <Scissors size={20} color="var(--accent)"/> Split Bill
+              </h3>
+              <button className="btn-close" onClick={() => { setIsSplitOpen(false); setSplitBillData(null); }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSplitSubmit} className="add-bill-form">
+              <p className="subtitle" style={{marginBottom: 10, marginTop: 0}}>
+                You are splitting <strong>{splitBillData.name}</strong> (${splitBillData.amount}).
+              </p>
+              <p style={{fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: 20}}>
+                How much do you want to break off into a brand new card?
+              </p>
+              
+              <div className="form-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>$</span>
+                <input 
+                  type="number" 
+                  autoFocus 
+                  className="input-field" 
+                  placeholder="Amount to split off" 
+                  value={splitAmount} 
+                  onChange={(e) => setSplitAmount(e.target.value)} 
+                  max={splitBillData.amount - 0.01} // Prevent splitting the whole thing
+                  step="0.01"
+                />
+              </div>
+
+              {splitAmount && parseFloat(splitAmount) > 0 && parseFloat(splitAmount) < splitBillData.amount && (
+                <div style={{ marginTop: 15, padding: 10, background: 'rgba(245, 158, 11, 0.1)', borderRadius: 8, fontSize: '0.85rem' }}>
+                  <strong>Result:</strong> You will have one card for ${ (splitBillData.amount - parseFloat(splitAmount)).toFixed(2) } and a new card for ${ parseFloat(splitAmount).toFixed(2) }.
+                </div>
+              )}
+
+              <div className="form-actions" style={{justifyContent: 'flex-end', marginTop: 20}}>
+                <button type="button" className="btn-cancel" onClick={() => { setIsSplitOpen(false); setSplitBillData(null); }}>Cancel</button>
+                <button type="submit" className="btn-primary">Split Bill</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {expandedChart && (<div className="chart-modal-overlay"><div className="chart-modal-content animate-fade-in"><button className="btn-close-chart" onClick={() => setExpandedChart(null)}><X size={24} /></button><div className="modal-chart-header" style={{marginBottom: 20, display: 'flex', alignItems: 'center', gap: 15}}><h2 style={{margin: 0}}>{expandedChart === 'breakdown' && 'Spending Breakdown'}{expandedChart === 'cashflow' && 'Money In vs Money Out'}{expandedChart === 'burden' && 'Fixed Bills vs Free Cash'}{expandedChart === 'trend' && '6-Month Financial Trend'}</h2>{expandedChart === 'breakdown' && (<div className="select-wrapper-small" style={{marginRight: 4}}><Layers size={14} className="icon"/><select value={chartGroupBy} onChange={(e) => setChartGroupBy(e.target.value)}><option value="owner">By Owner</option><option value="category">By Category</option></select></div>)}{expandedChart === 'breakdown' && (<div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={breakdownFilter} onChange={(e) => setBreakdownFilter(e.target.value)}><option value="All">All Owners</option>{owners.map(o => <option key={o} value={o}>{o}</option>)}</select></div>)} {expandedChart === 'cashflow' && (<div className="select-wrapper-small"><Filter size={14} className="icon"/><select value={cashFlowFilter} onChange={(e) => setCashFlowFilter(e.target.value)}><option value="All">Household</option>{owners.map(o => <option key={o} value={o}>{o}</option>)}</select></div>)}</div><div style={{flex: 1, width: '100%', minHeight: 0}}>{renderChartContent(expandedChart)}</div></div></div>)}
       {isClosingOpen && (
         <div className="modal-overlay">
@@ -604,8 +881,170 @@ export default function App() {
   );
 }
 
-// ... Sub-components remain identical ...
-function DayPicker({ value, onChange }) { const [isOpen, setIsOpen] = useState(false); const wrapperRef = useRef(null); useEffect(() => { function handleClickOutside(event) { if (wrapperRef.current && !wrapperRef.current.contains(event.target)) { setIsOpen(false); } } document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, [wrapperRef]); const handleDaySelect = (day) => { onChange(day); setIsOpen(false); }; return (<div className="day-picker-container" ref={wrapperRef}><button className="day-picker-trigger" onClick={() => setIsOpen(!isOpen)}><CalendarIcon size={12} className="icon" /><span className="value">{value ? getOrdinal(value) : 'Date'}</span><ChevronDown size={10} className="arrow" /></button>{isOpen && (<div className="day-picker-popover animate-fade-in"><div className="day-grid">{Array.from({ length: 31 }, (_, i) => i + 1).map(day => (<button key={day} className={`day-btn ${value == day ? 'active' : ''}`} onClick={() => handleDaySelect(day)}>{day}</button>))}</div><button className="btn-clear-date" onClick={() => handleDaySelect('')}>Clear Date</button></div>)}</div>); }
+// ... Sub-components ...
+function DayPicker({ value, onChange }) { 
+  const inputRef = useRef(null);
+  let displayValue = 'Date';
+  
+  if (value) {
+    if (!isNaN(value) && !String(value).includes('-')) {
+      displayValue = getOrdinal(value); 
+    } else {
+      const [y, m, d] = value.split('-');
+      const dateObj = new Date(y, m - 1, d);
+      displayValue = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+  }
+
+  const handleOpenPicker = () => {
+    if (inputRef.current) {
+      try { inputRef.current.showPicker(); } catch (error) { inputRef.current.focus(); }
+    }
+  };
+
+  return (
+    <div className="day-picker-container" style={{ position: 'relative', display: 'inline-block' }}>
+      <button type="button" className="day-picker-trigger" onClick={handleOpenPicker} style={{ margin: 0, cursor: 'pointer' }}>
+        <CalendarIcon size={12} className="icon" />
+        <span className="value">{displayValue}</span>
+        <ChevronDown size={10} className="arrow" />
+      </button>
+      <input ref={inputRef} type="date" value={String(value).includes('-') ? value : ''} onChange={(e) => onChange(e.target.value)} style={{ position: 'absolute', bottom: 0, left: 0, opacity: 0, width: '1px', height: '1px', pointerEvents: 'none', border: 'none', padding: 0 }} />
+    </div>
+  ); 
+}
+
 function ChecklistWidget({ title, todos, onAdd, onToggle, onDelete, variant = 'global' }) { const [text, setText] = useState(''); const handleSubmit = (e) => { e.preventDefault(); if (text.trim()) { onAdd(text); setText(''); } }; return (<div className={`checklist-widget ${variant}`}>{title && <h4 className="checklist-title">{title}</h4>}<div className="checklist-items">{todos.map(todo => (<div key={todo.id} className="checklist-item"><button onClick={() => onToggle(todo.id)} className="btn-check">{todo.completed ? <CheckCircle2 size={16} color="var(--green)"/> : <Circle size={16} color="var(--text-dim)"/>}</button><span className={todo.completed ? 'completed' : ''}>{todo.text}</span><button onClick={() => onDelete(todo.id)} className="btn-del"><Trash2 size={14}/></button></div>))}</div><form onSubmit={handleSubmit} className="checklist-form"><input placeholder={variant === 'mini' ? "Add note..." : "Add a reminder..."} value={text} onChange={(e) => setText(e.target.value)} /><button type="submit"><Plus size={14}/></button></form></div>); }
-function BalanceSection({ title, owner, bills, isShared, onTogglePaid, onDelete, onAddOneTime, onBalance, onAddTodo, todos, onToggleTodo, onDeleteTodo }) { const sectionBills = bills.filter(b => b.owner === owner); const p1Bills = sectionBills.filter(b => b.columnId === 'pay1'); const p2Bills = sectionBills.filter(b => b.columnId === 'pay2'); const p1Total = p1Bills.reduce((sum, b) => sum + b.amount, 0); const p2Total = p2Bills.reduce((sum, b) => sum + b.amount, 0); return (<div className="balance-section"><div className="section-header-row"><h3 style={{color: isShared ? 'var(--accent)' : 'var(--text)'}}>{title}</h3><button className="btn-icon-only" onClick={() => onBalance(owner)} title={`Auto-Balance ${owner}'s Bills Only`} style={{marginLeft: 10}}><RefreshCw size={16} /></button></div><div className="balance-grid"><Droppable droppableId={`${owner}-pay1`}>{(provided, snapshot) => (<div className={`mini-column ${snapshot.isDraggingOver ? 'drag-active' : ''}`} ref={provided.innerRef} {...provided.droppableProps}><div className="mini-header"><div><span>Paycheck 1</span><button className="btn-add-quick" onClick={() => onAddOneTime(owner, 'pay1')} title="Add one-time bill"><Plus size={14}/></button></div><span className="mini-total">Bills: -${p1Total}</span></div>{p1Bills.map((bill, index) => <BillCard key={bill.snapshotId} bill={bill} index={index} onTogglePaid={onTogglePaid} onDelete={onDelete}/>)}{provided.placeholder}<div style={{marginTop: 15}}><ChecklistWidget todos={todos.filter(t => t.columnId === 'pay1')} onAdd={(text) => onAddTodo(text, 'pay1')} onToggle={onToggleTodo} onDelete={onDeleteTodo} variant="mini"/></div></div>)}</Droppable><Droppable droppableId={`${owner}-pay2`}>{(provided, snapshot) => (<div className={`mini-column ${snapshot.isDraggingOver ? 'drag-active' : ''}`} ref={provided.innerRef} {...provided.droppableProps}><div className="mini-header"><div><span>Paycheck 2</span><button className="btn-add-quick" onClick={() => onAddOneTime(owner, 'pay2')} title="Add one-time bill"><Plus size={14}/></button></div><span className="mini-total">Bills: -${p2Total}</span></div>{p2Bills.map((bill, index) => <BillCard key={bill.snapshotId} bill={bill} index={index} onTogglePaid={onTogglePaid} onDelete={onDelete}/>)}{provided.placeholder}<div style={{marginTop: 15}}><ChecklistWidget todos={todos.filter(t => t.columnId === 'pay2')} onAdd={(text) => onAddTodo(text, 'pay2')} onToggle={onToggleTodo} onDelete={onDeleteTodo} variant="mini"/></div></div>)}</Droppable></div></div>); }
-function BillCard({ bill, index, onTogglePaid, onDelete }) { const catIcon = getCategoryIcon(bill.category || 'other'); return (<Draggable draggableId={bill.snapshotId} index={index}>{(provided) => (<div className={`draggable-bill mini-bill ${bill.isPaid ? 'is-paid' : ''} ${bill.isSavings ? 'is-savings-bill' : ''}`} ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} style={{...provided.draggableProps.style, borderLeft: bill.owner === 'Shared' ? '3px solid var(--accent)' : '1px solid var(--border)'}}><button className="btn-toggle-paid" onClick={() => onTogglePaid(bill.snapshotId)}>{bill.isPaid ? <CheckCircle2 size={18} color="var(--green)"/> : <Circle size={18} color="var(--text-dim)"/>}</button><div className="bill-content"><div className="bill-name">{bill.name}</div><div className="bill-sub">Due the {getOrdinal(bill.dueDate)}</div><div className="bill-owner-label" style={{display: 'flex', alignItems: 'center', gap: 4}}>{catIcon}<span>{bill.originalOwner || bill.owner}</span></div></div><div className="bill-amt">-${bill.amount}</div><button className="btn-del-month" onClick={() => onDelete(bill.snapshotId)} title="Remove from this month only"><Trash2 size={14}/></button></div>)}</Draggable>); }
+
+function BalanceSection({ title, owner, bills, isShared, onTogglePaid, onDelete, onAddOneTime, onBalance, onAddTodo, todos, onToggleTodo, onDeleteTodo, activeColumns = ['p1', 'p2'], paycheckLabels = {}, monthKey = '', onSplit }) { 
+  const sectionBills = bills.filter(b => b.owner === owner); 
+  
+  return (
+    <div className="balance-section">
+      <div className="section-header-row">
+        <h3 style={{color: isShared ? 'var(--accent)' : 'var(--text)'}}>{title}</h3>
+        <button className="btn-icon-only" onClick={() => onBalance(owner)} title={`Auto-Balance ${owner}'s Bills Only`} style={{marginLeft: 10}}><RefreshCw size={16} /></button>
+      </div>
+      <div className="balance-grid" style={{ gridTemplateColumns: `repeat(${activeColumns.length}, 1fr)` }}>
+        
+        {activeColumns.map((col, index) => {
+          const incKey = col.replace('pay', 'p');
+          const colBills = sectionBills.filter(b => b.columnId === col || b.columnId === incKey);
+          const colTotal = colBills.reduce((sum, b) => sum + b.amount, 0);
+          const customLabel = paycheckLabels[`${monthKey}_${owner}_${col}`] || `Check ${index + 1}`;
+
+          return (
+            <Droppable key={col} droppableId={`${owner}-${col}`}>
+              {(provided, snapshot) => (
+                <div className={`mini-column ${snapshot.isDraggingOver ? 'drag-active' : ''}`} ref={provided.innerRef} {...provided.droppableProps}>
+                  <div className="mini-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 600 }}>{customLabel}</span>
+                      
+                      {/* --- UPDATED BUTTON HERE --- */}
+                      <button 
+                        className="btn-add-quick" 
+                        onClick={() => onAddOneTime(owner, col)} 
+                        title="Add one-time bill"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px' }}
+                      >
+                        <Plus size={14}/> Add one-time bill
+                      </button>
+                      
+                    </div>
+                    <span className="mini-total">Bills: -${colTotal.toFixed(2)}</span>
+                  </div>
+                  {colBills.map((bill, billIndex) => <BillCard key={bill.snapshotId} bill={bill} index={billIndex} onTogglePaid={onTogglePaid} onDelete={onDelete} onSplit={onSplit}/>)}
+                  {provided.placeholder}
+                  <div style={{marginTop: 15}}>
+                    <ChecklistWidget todos={todos.filter(t => t.columnId === col)} onAdd={(text) => onAddTodo(text, col)} onToggle={onToggleTodo} onDelete={onDeleteTodo} variant="mini"/>
+                  </div>
+                </div>
+              )}
+            </Droppable>
+          )
+        })}
+      </div>
+    </div>
+  ); 
+}
+
+function BillCard({ bill, index, onTogglePaid, onDelete, onSplit }) { 
+  const catIcon = getCategoryIcon(bill.category || 'other'); 
+  
+  const handleStatusChange = (e) => {
+    const val = e.target.value;
+    
+    if (val === 'split') {
+      e.target.value = bill.isPaid ? 'paid' : 'unpaid'; 
+      onSplit(bill); // Trigger the new modal
+      return;
+    }
+    
+    if ((val === 'paid' && !bill.isPaid) || (val === 'unpaid' && bill.isPaid)) {
+      onTogglePaid(bill.snapshotId);
+    }
+  };
+
+  return (
+    <Draggable draggableId={bill.snapshotId} index={index}>
+      {(provided) => (
+        <div 
+          className={`draggable-bill mini-bill ${bill.isPaid ? 'is-paid' : ''} ${bill.isSavings ? 'is-savings-bill' : ''}`} 
+          ref={provided.innerRef} 
+          {...provided.draggableProps} 
+          {...provided.dragHandleProps} 
+          style={{
+            ...provided.draggableProps.style, 
+            borderLeft: bill.owner === 'Shared' ? '3px solid var(--accent)' : '1px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center', 
+            paddingLeft: '10px'
+          }}
+        >
+          
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginRight: '12px' }}>
+            <select 
+              value={bill.isPaid ? 'paid' : 'unpaid'}
+              onChange={handleStatusChange}
+              style={{
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                backgroundColor: bill.isPaid ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg)',
+                color: bill.isPaid ? 'var(--green)' : 'var(--text-dim)',
+                border: `1px solid ${bill.isPaid ? 'rgba(34, 197, 94, 0.4)' : 'var(--border)'}`,
+                borderRadius: '12px',
+                padding: '4px 22px 4px 8px', 
+                fontSize: '0.7rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              <option value="unpaid">⚪ Unpaid</option>
+              <option value="paid">🟢 Paid</option>
+              <option value="split">✂️ Split...</option>
+            </select>
+            <ChevronDown size={12} style={{ position: 'absolute', right: 6, pointerEvents: 'none', color: bill.isPaid ? 'var(--green)' : 'var(--text-dim)' }} />
+          </div>
+
+          <div className="bill-content" style={{ flex: 1, minWidth: 0 }}>
+            <div className="bill-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bill.name}</div>
+            <div className="bill-sub">Due the {getOrdinal(bill.dueDate)}</div>
+            <div className="bill-owner-label" style={{display: 'flex', alignItems: 'center', gap: 4, marginTop: '4px', margin: 0}}>
+              {catIcon}<span>{bill.originalOwner || bill.owner}</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', marginLeft: '10px' }}>
+            <div className="bill-amt">-${bill.amount.toFixed(2)}</div>
+            <button className="btn-del-month" onClick={() => onDelete(bill.snapshotId)} title="Remove from this month only" style={{ marginTop: '8px' }}>
+              <Trash2 size={14}/>
+            </button>
+          </div>
+
+        </div>
+      )}
+    </Draggable>
+  ); 
+}
