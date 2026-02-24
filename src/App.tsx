@@ -117,7 +117,12 @@ export default function App() {
   }, [isRecoveringPassword]);
 
   const loadUserData = async (userId) => {
-    setIsLoadingData(true);
+    // THE FIX: Only trigger the full-screen loading spinner if we aren't already logged in.
+    // This allows the app to sync data in the background when you switch tabs without destroying your child pages!
+    if (!session) {
+      setIsLoadingData(true);
+    }
+    
     try {
       const { data, error } = await supabase.from('user_state').select('*').eq('id', userId).maybeSingle();
       if (error) console.error('Error loading data:', error);
