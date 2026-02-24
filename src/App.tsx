@@ -92,17 +92,25 @@ export default function App() {
   // ==========================================
 
   useEffect(() => {
+    // 1. Initial Load when you first open the website
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) loadUserData(session.user.id);
       else setIsLoadingData(false);
     });
 
+    // 2. Active Listeners
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') setIsRecoveringPassword(true);
       setSession(session);
-      if (session && !isRecoveringPassword) loadUserData(session.user.id);
-      else setIsLoadingData(false);
+      
+      // THE FIX: We only run the heavy database loader if it's a brand new login.
+      // We explicitly ignore 'TOKEN_REFRESHED' which fires every time you switch browser tabs.
+      if (event === 'SIGNED_IN' && session && !isRecoveringPassword) {
+        loadUserData(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        setIsLoadingData(false);
+      }
     });
 
     return () => subscription.unsubscribe();
